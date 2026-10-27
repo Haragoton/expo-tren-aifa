@@ -623,7 +623,8 @@ html,body{overflow-x:clip}
   // ───────── acomodo: al soltar el scroll, la página llega sola a la diapositiva más cercana ─────────
   let lastMove = performance.now(), snapping = false, touching = false;
   addEventListener("wheel", () => { snapping = !!window.__keepNoSnap; }, { passive: true });
-  addEventListener("touchstart", () => { touching = true; snapping = !!window.__keepNoSnap; }, { passive: true });
+  const coarse = matchMedia("(pointer: coarse)").matches && !still;
+  addEventListener("touchstart", () => { touching = true; if (!coarse) snapping = !!window.__keepNoSnap; }, { passive: true });
   addEventListener("touchend", () => { touching = false; }, { passive: true });
   const nearestStop = () => {
     let best = null, bd = 1e9;
@@ -639,8 +640,23 @@ html,body{overflow-x:clip}
     for (const a of acts) if (a.visible && a.photos.length) photos(a, now);
     requestAnimationFrame(loop);
   };
-  const next = () => { const n = stops.find((x) => x > scrollY + 4); if (n == null) return false; snapping = true; go(n); return true; };
-  const prev = () => { const p = [...stops].reverse().find((x) => x < scrollY - 4); snapping = true; go(p ?? 0); };
+  // mientras va una transición, la siguiente cuenta desde su destino (no desde donde va el scroll)
+  let tgt = null;
+  const from = () => (snapping && tgt != null ? tgt : scrollY);
+  const next = () => { const y = from(), n = stops.find((x) => x > y + 4); if (n == null) return false; snapping = true; go(n); return true; };
+  const prev = () => { const y = from(), p = [...stops].reverse().find((x) => x < y - 4); snapping = true; go(p ?? 0); };
+  // teléfonos: un deslizamiento = una diapositiva; sin inercia nativa que se salte dos
+  if (coarse) {
+    let y0 = 0, x0 = 0, free = false;
+    addEventListener("touchstart", (e) => { const t = e.touches[0]; y0 = t.clientY; x0 = t.clientX; free = !!e.target.closest(".tbl, .maps"); }, { passive: true });
+    addEventListener("touchmove", (e) => { if (!free && e.cancelable) e.preventDefault(); }, { passive: false });
+    addEventListener("touchend", (e) => {
+      if (free || e.touches.length) return;
+      const t = e.changedTouches[0], dy = y0 - t.clientY, dx = x0 - t.clientX;
+      if (Math.abs(dy) < 28 || Math.abs(dy) < Math.abs(dx)) return;
+      if (dy > 0) next(); else prev();
+    }, { passive: true });
+  }
 
   // modo presentación: A avanza solo de diapositiva en diapositiva
   let auto = null;
@@ -672,7 +688,8 @@ html,body{overflow-x:clip}
 
   // ───────── teclado y rayitas ─────────
   const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-  function go(y, dur = 1.4) {
+  function go(y, dur = coarse ? 0.95 : 1.4) {
+    tgt = y;
     if (lenis) lenis.scrollTo(y, { duration: dur, easing: ease, onComplete: () => { snapping = !!window.__keepNoSnap; } });
     else { scrollTo({ top: y, behavior: still ? "auto" : "smooth" }); setTimeout(() => { snapping = !!window.__keepNoSnap; }, dur * 1000); }
   }
