@@ -447,7 +447,7 @@ html,body{overflow-x:clip}
 (() => {
   const vh = () => innerHeight;
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const lenis = window.Lenis && !still ? new window.Lenis({ duration: 1.25, easing: (t) => 1 - Math.pow(1 - t, 4), smoothWheel: true }) : null;
+  const lenis = window.Lenis && !still ? new window.Lenis({ duration: 1.25, easing: (t) => 1 - Math.pow(1 - t, 4), smoothWheel: false }) : null;
   if (lenis) { const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); }; requestAnimationFrame(raf); }
   window.lenis = lenis;
   // la versión ligera (960 px) solo cuando la pantalla de verdad es chica (píxeles reales) o se pidió ahorrar datos
@@ -622,7 +622,6 @@ html,body{overflow-x:clip}
 
   // ───────── acomodo: al soltar el scroll, la página llega sola a la diapositiva más cercana ─────────
   let lastMove = performance.now(), snapping = false, touching = false;
-  addEventListener("wheel", () => { snapping = !!window.__keepNoSnap; }, { passive: true });
   const coarse = matchMedia("(pointer: coarse)").matches && !still;
   addEventListener("touchstart", () => { touching = true; if (!coarse) snapping = !!window.__keepNoSnap; }, { passive: true });
   addEventListener("touchend", () => { touching = false; }, { passive: true });
@@ -645,6 +644,24 @@ html,body{overflow-x:clip}
   const from = () => (snapping && tgt != null ? tgt : scrollY);
   const next = () => { const y = from(), n = stops.find((x) => x > y + 4); if (n == null) return false; snapping = true; go(n); return true; };
   const prev = () => { const y = from(), p = [...stops].reverse().find((x) => x < y - 4); snapping = true; go(p ?? 0); };
+  // computadora: un gesto de rueda o trackpad = una diapositiva; la inercia del mismo gesto no cuenta
+  if (!coarse && !still) {
+    let acc = 0, last = 0, fired = 0, lastDy = 0;
+    addEventListener("wheel", (e) => {
+      if (e.ctrlKey) return;                       // zoom del navegador
+      e.preventDefault(); e.stopImmediatePropagation();   // Lenis frenaría la transición en cada evento de inercia
+      const now = performance.now(), dy = e.deltaMode ? e.deltaY * 40 : e.deltaY, fresh = now - last > 200;
+      // la inercia solo decrece: un empujón más fuerte que el anterior es un gesto nuevo
+      const push = Math.abs(dy) > 20 && Math.abs(dy) > 1.5 * Math.abs(lastDy);
+      last = now; lastDy = dy;
+      if (fresh || push) { acc = 0; fired = 0; }
+      if (fired) return;
+      acc += dy;
+      if (Math.abs(acc) < 30) return;
+      fired = now; const d = acc; acc = 0;
+      if (d > 0) next(); else prev();
+    }, { passive: false, capture: true });
+  }
   // teléfonos: un deslizamiento = una diapositiva; sin inercia nativa que se salte dos
   if (coarse) {
     let y0 = 0, x0 = 0, free = false;
