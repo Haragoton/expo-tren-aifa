@@ -450,8 +450,10 @@ html,body{overflow-x:clip}
   const lenis = window.Lenis && !still ? new window.Lenis({ duration: 1.25, easing: (t) => 1 - Math.pow(1 - t, 4), smoothWheel: false }) : null;
   if (lenis) { const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); }; requestAnimationFrame(raf); }
   window.lenis = lenis;
-  // la versión ligera (960 px) solo cuando la pantalla de verdad es chica (píxeles reales) o se pidió ahorrar datos
-  const LITE = innerWidth * (devicePixelRatio || 1) < 1000 || !!navigator.connection?.saveData;
+  // versión ligera (960 px): teléfonos y tablets chicas (aunque su pantalla tenga muchos píxeles, el 1080p
+  // pesa 10 veces más y traba al decodificar), pantallas chicas de verdad, o si se pidió ahorrar datos
+  const phone = matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 820;
+  const LITE = phone || innerWidth * (devicePixelRatio || 1) < 1000 || !!navigator.connection?.saveData;
   const BASE = LITE ? "v_m" : "v";
 
   // partir títulos en palabras para que entren una por una
