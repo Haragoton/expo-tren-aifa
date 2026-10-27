@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tren Suburbano Buenavista–AIFA · Equipo 7</title>
+<meta name="description" content="Exposición del Equipo 7 sobre la ampliación del Tren Suburbano Lechería–AIFA, con animaciones renderizadas en Blender.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff5a1f'/%3E%3Cpath d='M9 21V12a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v9z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/inter-tight-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:"Inter Tight";src:url(fonts/inter-tight-latin-wght-normal.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:block}
+:root{--ink:#fff;--dim:rgba(255,255,255,.72);--accent:#ff5a1f;--accent2:#ffb627;--bg:#050506;--ease:cubic-bezier(.16,1,.3,1);--pad:clamp(18px,3.4vw,56px)}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Inter Tight",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:clip}
+body.loading{overflow:hidden}
+
+/* ───────── tomas a pantalla completa; cada una entra deslizándose sobre la anterior ───────── */
+.act{position:relative;height:calc((var(--len) + 2) * 100vh)}
+.act+.act{margin-top:-100vh}
+.pin{position:sticky;top:0;height:100vh;overflow:hidden;background:#000;transform-origin:50% 0;will-change:transform}
+.pin canvas,.pin .photo{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pin .photo{object-fit:cover;opacity:0;will-change:transform,opacity}
+.pin .shade{position:absolute;inset:0;pointer-events:none;background:rgba(0,0,0,0);transition:background .2s linear}
+/* viñeta para que el texto se lea sin tapar la imagen */
+.pin::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 16%)}
+
+/* ───────── textos: retícula con aire, como las referencias ───────── */
+/* cada frase cubre la pantalla con una retícula de 12 columnas; el texto vive en los bordes y el render queda libre al centro */
+.beat{position:absolute;inset:0;z-index:3;pointer-events:none;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:clamp(14px,2vw,32px);
+  padding:clamp(80px,13vh,130px) var(--pad) clamp(56px,10vh,110px);align-content:end;opacity:0;visibility:hidden;transition:opacity .6s var(--ease),visibility 0s .6s}
+.beat.on{opacity:1;visibility:visible;transition:opacity .45s var(--ease)}
+/* degradado solo del lado del texto */
+.beat::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none}
+.beat.L::before{background:linear-gradient(90deg,rgba(0,0,0,.72),rgba(0,0,0,.32) 38%,transparent 58%),linear-gradient(270deg,rgba(0,0,0,.55),transparent 34%)}
+.beat.R::before{background:linear-gradient(270deg,rgba(0,0,0,.72),rgba(0,0,0,.32) 38%,transparent 58%),linear-gradient(90deg,rgba(0,0,0,.55),transparent 34%)}
+.beat.B::before,.beat.map::before,.beat.proc::before{background:linear-gradient(0deg,rgba(0,0,0,.78),rgba(0,0,0,.3) 42%,transparent 65%)}
+.beat.C::before{background:radial-gradient(60% 50% at 50% 50%,rgba(0,0,0,.55),transparent 75%)}
+.beat.chap::before{background:linear-gradient(0deg,rgba(0,0,0,.6),transparent 55%)}
+.beat.hero::before{background:linear-gradient(0deg,rgba(0,0,0,.6),transparent 40%),linear-gradient(180deg,rgba(0,0,0,.35),transparent 30%)}
+
+/* bloque de texto */
+.side{grid-column:1/span 4;align-self:end;max-width:30rem}
+.beat.R>.side{grid-column:9/span 4;grid-row:1}
+.beat.R>.rows,.beat.R>.stats{grid-column:1/span 5;grid-row:1}
+.beat.L>.rows,.beat.L>.stats,.beat.L>.col{grid-column:8/span 5}
+.beat.R>.col{grid-column:1/span 5;grid-row:1}
+.col{display:grid;gap:clamp(18px,3vh,34px);align-self:end}
+.col .stats{border-bottom:0}
+.beat.B .side,.beat.map .side,.beat.proc .side{grid-column:1/span 6;margin-bottom:clamp(22px,4vh,44px)}
+.beat.B .stats,.beat.map .route,.beat.proc .steps{grid-column:1/-1}
+.k{margin:0 0 16px;font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2)}
+.h{margin:0;font-size:clamp(34px,3.5vw,60px);line-height:1;font-weight:700;letter-spacing:-.035em;text-wrap:balance}
+.p{margin:16px 0 0;max-width:34ch;font-size:clamp(15px,1.08vw,18px);line-height:1.5;font-weight:400;color:var(--dim);text-wrap:pretty}
+
+/* frase al centro, con mucho espacio */
+.beat.C{align-content:center;justify-items:center;text-align:center}
+.beat.C>*{grid-column:3/span 8}
+.beat.C .h{font-size:clamp(40px,4.6vw,84px);font-weight:600;letter-spacing:-.04em}
+.beat.C .p{margin:18px auto 0}
+
+/* portada */
+.beat.hero{align-content:stretch;grid-template-rows:auto 1fr auto}
+.hero-top{grid-column:1/-1;grid-row:1}
+.t{grid-column:1/-1;grid-row:2;align-self:end;margin:0 0 clamp(28px,6vh,64px);font-size:clamp(76px,11.5vw,220px);line-height:.84;font-weight:800;letter-spacing:-.06em}
+.beat.C .t{font-size:clamp(90px,13vw,240px);margin:0}
+.hero-foot{grid-column:1/-1;grid-row:3;display:grid;grid-template-columns:1fr 1fr auto;gap:var(--pad);padding-top:18px;border-top:1px solid rgba(255,255,255,.28)}
+.hero-foot p{margin:0;font-size:14px;line-height:1.5;color:var(--dim)}
+.hero-foot .scroll{text-align:right;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:#fff}
+
+/* portada de etapa */
+.beat.chap{align-content:end}
+.num{grid-column:1/span 5;margin:0 0 -.08em;font-size:clamp(160px,24vw,440px);line-height:.78;font-weight:800;letter-spacing:-.08em;color:transparent;-webkit-text-stroke:1.5px rgba(255,255,255,.75)}
+.chap-t{grid-column:7/span 6;align-self:end;padding-bottom:1vh}
+.chap-t .h{font-size:clamp(48px,5.6vw,104px)}
+
+/* filas numeradas con divisores */
+.rows{list-style:none;margin:0;padding:0;align-self:end;border-bottom:1px solid rgba(255,255,255,.2)}
+.rows li{display:grid;grid-template-columns:2.6em 1fr;column-gap:12px;padding:15px 0 14px;border-top:1px solid rgba(255,255,255,.2)}
+.rows .i{grid-row:span 2;font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--accent2);padding-top:5px}
+.rows b{font-size:clamp(17px,1.35vw,23px);font-weight:600;letter-spacing:-.015em;line-height:1.2}
+.rows p{margin:4px 0 0;font-size:clamp(13px,.95vw,15px);line-height:1.4;color:var(--dim)}
+
+/* cifras en fila con separadores */
+.stats{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-self:end;border-top:1px solid rgba(255,255,255,.22)}
+.stats>div{padding:18px clamp(14px,2vw,30px) 0 0;display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:.3em}
+.stats>div+div{padding-left:clamp(14px,2vw,30px);border-left:1px solid rgba(255,255,255,.22)}
+.stats b{font-size:clamp(40px,4.6vw,84px);line-height:.95;font-weight:700;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.stats i{font-style:normal;font-size:clamp(14px,1.2vw,20px);font-weight:600;color:var(--accent2)}
+.stats span{grid-column:1/-1;margin-top:8px;font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.beat.L .stats,.beat.R .stats{grid-auto-flow:row;grid-auto-columns:auto}
+.beat.L .stats>div+div,.beat.R .stats>div+div{border-left:0;padding-left:0;border-top:1px solid rgba(255,255,255,.22)}
+.beat.L .stats>div,.beat.R .stats>div{padding:16px 0 14px}
+
+/* ruta de estaciones */
+.route{list-style:none;margin:0;padding:22px 0 0;display:grid;grid-template-columns:repeat(8,1fr);position:relative}
+.route::before{content:"";position:absolute;left:0;right:0;top:22px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform-origin:left;transform:scaleX(0);transition:transform 1.4s var(--ease)}
+.beat.on .route::before{transform:scaleX(1)}
+.route li{position:relative;padding-top:24px;opacity:0;transform:translateY(12px);transition:opacity .6s var(--ease) calc(var(--i) * 110ms + .3s),transform .6s var(--ease) calc(var(--i) * 110ms + .3s)}
+.beat.on .route li{opacity:1;transform:none}
+.route li::before{content:"";position:absolute;left:0;top:-6px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 5px rgba(255,255,255,.16)}
+.route b{display:block;font-size:clamp(15px,1.25vw,21px);font-weight:600;letter-spacing:-.01em}
+.route span{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+
+/* pasos del proceso */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid rgba(255,255,255,.22)}
+.steps li{padding:18px 14px 0 0;font-size:clamp(15px,1.2vw,20px);font-weight:600;letter-spacing:-.01em;opacity:0;transform:translateY(16px);transition:opacity .6s var(--ease) calc(var(--i) * 90ms),transform .6s var(--ease) calc(var(--i) * 90ms)}
+.steps li+li{padding-left:14px;border-left:1px solid rgba(255,255,255,.22)}
+.beat.on .steps li{opacity:1;transform:none}
+.steps b{display:block;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--accent2)}
+.steps span{display:block;margin-top:6px;font-size:13px;font-weight:400;color:var(--dim)}
+
+/* entrada: palabras del título, y luego cada bloque escalonado */
+.w{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.08em;margin-bottom:-.08em}
+.w>span{display:inline-block;transform:translateY(105%);transition:transform 1s var(--ease) calc(var(--d) * 40ms + .1s)}
+.beat.on .w>span{transform:none}
+.beat .k,.beat .p,.hero-foot,.chap-t .p{opacity:0;transform:translateY(12px);transition:opacity .8s var(--ease) .25s,transform 1s var(--ease) .25s}
+.beat.on .k,.beat.on .p,.beat.on .hero-foot,.beat.on .chap-t .p{opacity:1;transform:none}
+.rows li,.stats>div{opacity:0;transform:translateY(14px);transition:opacity .7s var(--ease) calc(var(--i) * 90ms + .3s),transform .9s var(--ease) calc(var(--i) * 90ms + .3s)}
+.beat.on .rows li,.beat.on .stats>div{opacity:1;transform:none}
+.num{opacity:0;transform:translateY(30px);transition:opacity 1s var(--ease),transform 1.2s var(--ease)}
+.beat.on .num{opacity:1;transform:none}
+
+/* sismo: la toma tiembla mientras se habla de rehabilitación */
+.pin.quake canvas{animation:quake .38s linear infinite}
+@keyframes quake{0%,100%{transform:translate(0,0) scale(1.03)}20%{transform:translate(-7px,3px) scale(1.03)}40%{transform:translate(6px,-4px) scale(1.03)}60%{transform:translate(-4px,-2px) scale(1.03)}80%{transform:translate(5px,4px) scale(1.03)}}
+
+/* ───────── interfaz fija ───────── */
+.hud{position:fixed;left:var(--pad);right:var(--pad);top:20px;z-index:50;display:flex;justify-content:space-between;align-items:center;pointer-events:none;mix-blend-mode:difference}
+.hud b{font-size:14px;font-weight:800;letter-spacing:-.01em}
+.hud span{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+.bar{position:fixed;left:var(--pad);right:var(--pad);bottom:18px;z-index:50;display:flex;gap:6px}
+.bar a{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.22);overflow:hidden;cursor:pointer;position:relative}
+.bar a i{position:absolute;inset:0;background:#fff;transform-origin:left;transform:scaleX(var(--p,0))}
+.bar a:hover{background:rgba(255,255,255,.45)}
+.who{position:fixed;right:var(--pad);top:46px;z-index:50;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);opacity:0;transition:opacity .4s}
+.who.on{opacity:1}
+
+/* cargando */
+.loader{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#000;transition:opacity .8s var(--ease),visibility 0s .8s}
+.loader p{margin:0;font-size:clamp(40px,6vw,96px);font-weight:900;letter-spacing:-.05em}
+.loader i{display:block;height:3px;margin-top:18px;background:var(--accent);transform-origin:left;transform:scaleX(var(--p,0));transition:transform .2s}
+body:not(.loading) .loader{opacity:0;visibility:hidden}
+
+/* modo expositor */
+.presenter{position:fixed;right:16px;bottom:34px;z-index:60;width:min(400px,calc(100vw - 32px));padding:14px 16px;border-radius:16px;background:rgba(8,8,10,.86);border:1px solid rgba(255,255,255,.14);font-size:14px;line-height:1.4;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .3s,transform .3s}
+.presenter.on{opacity:1;transform:none;pointer-events:auto}
+.pr-top{display:flex;align-items:baseline;gap:8px}
+.pr-clock{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.presenter.paused .pr-clock{opacity:.45}
+.pr-total{opacity:.6;font-weight:600}
+.pr-pace{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.08)}
+.pr-pace[data-state=ok]{color:#7dffb0}.pr-pace[data-state=late]{color:#ff8a8a;background:rgba(255,80,80,.15)}.pr-pace[data-state=early]{color:#8fd0ff}
+.pr-bar{position:relative;height:4px;margin:10px 0 12px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.pr-fill{position:absolute;inset:0;background:var(--accent);transform-origin:left;transform:scaleX(0)}
+.pr-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff}
+.pr-sec{margin:0 0 6px;font-weight:700}
+.pr-secbar{height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.pr-secbar i{display:block;height:100%;background:#fff;transform-origin:left;transform:scaleX(0)}
+.presenter.over .pr-secbar i{background:#ff6a6a}
+.pr-notes{display:none;margin:12px 0 0;max-height:42vh;overflow:auto;color:rgba(255,255,255,.9)}
+.pr-notes ul{margin:0;padding-left:18px}.pr-notes li+li{margin-top:6px}
+.presenter.notes .pr-notes{display:block}
+.pr-help{margin:10px 0 0;font-size:11px;opacity:.55}
+kbd{font:inherit;font-size:.85em;padding:1px 6px;border:1px solid rgba(255,255,255,.3);border-bottom-width:2px;border-radius:4px}
+
+@media (max-width:820px){.beat>*{min-width:0}.beat{grid-template-columns:minmax(0,1fr)}.beat .side,.beat .rows,.beat .stats,.chap-t,.num{grid-column:1/-1!important;grid-row:auto!important}.route{grid-template-columns:repeat(4,1fr);row-gap:22px}.steps{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:16px}.steps li:nth-child(odd){border-left:0;padding-left:0}.steps li{font-size:15px}}
+@media (prefers-reduced-motion:reduce){.w>span,.beat *{transition:none!important}.pin.quake canvas{animation:none}}
+
+/* grano de película fijo (no se anima: no cuesta nada al hacer scroll) */
+.grain{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:.07;mix-blend-mode:overlay;background-size:220px 220px}
+/* color de acento por toma */
+.act{--accent:var(--a1,#ff5a1f);--accent2:var(--a2,#ffb627)}
+.pin{contain:strict}
+
+/* la imagen nunca queda congelada: acercamiento lento y continuo (solo compositor, no cuesta) */
+.pin canvas{animation:breathe 18s ease-in-out infinite alternate;transform-origin:50% 55%}
+@keyframes breathe{from{transform:scale(1.0)}to{transform:scale(1.06)}}
+.auto-badge{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:55;margin:0;padding:6px 14px;border-radius:999px;background:rgba(8,8,10,.7);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:0;transition:opacity .3s;pointer-events:none}
+.auto-badge.on{opacity:1}
+/* toma por pasos: indicador de clics */
+.steps-hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:6;margin:0;display:flex;align-items:center;gap:14px;padding:8px 16px;border-radius:999px;background:rgba(8,8,10,.55);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.78);pointer-events:none;transition:opacity .4s}
+.steps-hint i{display:flex;gap:6px}
+.steps-hint b{width:18px;height:3px;border-radius:2px;background:rgba(255,255,255,.22);transition:background .4s}
+.steps-hint b.on{background:var(--a1,#fff)}
+.steps-hint.end span{opacity:.45}
+.act[data-steps] .pin{cursor:pointer}
+/* las tomas que salen se agrandan un poco: que no generen scroll horizontal */
+html,body{overflow-x:clip}
+/* teléfono: el título de la toma no se encima con el logotipo */
+.hud span{min-width:0;margin-left:16px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:520px){.hud b{flex:none}.hud span{font-size:10px;letter-spacing:.1em}}
+/* ───────── José: mapas y tablas sobre la animación de fondo ───────── */
+.beat.M::before,.beat.T::before{background:linear-gradient(0deg,rgba(0,0,0,.7),rgba(0,0,0,.35) 60%,rgba(0,0,0,.2))}
+.beat.M{align-content:center}
+.beat.M .side{grid-column:1/span 3;align-self:center}
+.maps{grid-column:4/span 9;display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,28px);align-self:center}
+.maps figure{margin:0;opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease) calc(var(--i) * 140ms),transform .7s var(--ease) calc(var(--i) * 140ms)}
+.beat.on .maps figure{opacity:1;transform:none}
+.maps img{display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:10px;background:#fff;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.maps figcaption{margin-top:10px;font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--dim)}
+.beat.T{align-content:center;justify-items:center}
+.tbl{grid-column:2/span 10;width:100%;max-width:1060px;padding:clamp(16px,2.4vw,30px);border-radius:14px;background:rgba(6,7,10,.78);border:1px solid rgba(255,255,255,.1)}
+.tbl table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:clamp(12px,1vw,16px)}
+.tbl th{padding:0 10px 12px;text-align:right;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid rgba(255,255,255,.22)}
+.tbl th:first-child,.tbl td:first-child{text-align:left;padding-left:0}
+.tbl td{padding:clamp(5px,.9vh,10px) 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08);opacity:0;transition:opacity .5s var(--ease) calc(var(--i, 0) * 45ms)}
+.tbl tr{--i:0}
+.beat.on .tbl td{opacity:1}
+.tbl .pick{color:var(--accent2);font-weight:600}
+.tbl tr.sub td{font-weight:600;color:#fff;border-top:1px solid rgba(255,255,255,.22)}
+.tbl tfoot td{padding-top:12px;font-weight:700;font-size:clamp(13px,1.15vw,18px);border-bottom:0;border-top:1px solid rgba(255,255,255,.35)}
+.tbl .k{margin-bottom:14px}
+@media (max-width:820px){
+  .beat.M .side,.maps{grid-column:1/-1!important}
+  .maps{grid-template-columns:1fr 1fr;gap:10px}.maps img{max-height:34vh}
+  .tbl{grid-column:1/-1!important;padding:12px;overflow-x:auto}
+  .tbl table{font-size:10.5px}.tbl th{font-size:9px;letter-spacing:.06em;padding:0 5px 8px}.tbl td{padding:4px 5px}
+}
+@media (max-width:520px){
+  .tbl{padding:10px 8px}
+  .tbl table{font-size:9px;letter-spacing:-.02em;table-layout:auto}
+  .tbl td{padding:3px 3px;white-space:nowrap}.tbl td:first-child{white-space:normal;line-height:1.15}
+  .tbl th{font-size:7.5px;padding:0 3px 6px}
+  .tbl tfoot td{font-size:10px}
+  .tbl .k{font-size:10px;letter-spacing:.12em}
+}
+/* ───────── videos por diapositiva: el nuevo entra con una disolvencia sobre el anterior ───────── */
+.pin .vids{position:absolute;inset:0;background:#000}
+.pin .vids video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .75s cubic-bezier(.4,0,.2,1)}
+.pin .vids video.on{opacity:1}
+/* rayitas: una por diapositiva, con un hueco mayor entre tomas */
+.bar{gap:3px}
+.bar a{height:3px}
+.bar a.first{margin-left:7px}
+.bar a:first-child{margin-left:0}
+.bar a.now{background:rgba(255,255,255,.4)}
+@media (max-width:520px){.bar{gap:2px}.bar a.first{margin-left:4px}.bar a{height:2px}}
+</style>
+</head>
+<body class="loading">
+<div class="loader" aria-hidden="true"><div><p>Tren Suburbano</p><i></i></div></div>
+<header class="hud"><b>Tren Suburbano · AIFA</b><span>Inicio</span></header>
+<p class="who" aria-live="polite"></p>
+<nav class="bar" aria-label="Diapositivas"><a class="first" data-act="0" data-beat="0" title="Inicio"><i></i></a><a data-act="0" data-beat="1" title="Inicio"><i></i></a><a data-act="0" data-beat="2" title="Inicio"><i></i></a><a class="first" data-act="1" data-beat="0" title="Preguntas guía"><i></i></a><a data-act="1" data-beat="1" title="Preguntas guía"><i></i></a><a class="first" data-act="2" data-beat="0" title="Desarrollo"><i></i></a><a data-act="2" data-beat="1" title="Desarrollo"><i></i></a><a data-act="2" data-beat="2" title="Desarrollo"><i></i></a><a class="first" data-act="3" data-beat="0" title="Localización"><i></i></a><a data-act="3" data-beat="1" title="Localización"><i></i></a><a data-act="3" data-beat="2" title="Localización"><i></i></a><a class="first" data-act="4" data-beat="0" title="Topografía y reubicación"><i></i></a><a data-act="4" data-beat="1" title="Topografía y reubicación"><i></i></a><a class="first" data-act="5" data-beat="0" title="Estudios previos"><i></i></a><a data-act="5" data-beat="1" title="Estudios previos"><i></i></a><a class="first" data-act="6" data-beat="0" title="Impacto y mitigación"><i></i></a><a data-act="6" data-beat="1" title="Impacto y mitigación"><i></i></a><a data-act="6" data-beat="2" title="Impacto y mitigación"><i></i></a><a class="first" data-act="7" data-beat="0" title="Cuantificación"><i></i></a><a data-act="7" data-beat="1" title="Cuantificación"><i></i></a><a data-act="7" data-beat="2" title="Cuantificación"><i></i></a><a data-act="7" data-beat="3" title="Cuantificación"><i></i></a><a class="first" data-act="8" data-beat="0" title="Estación tipo"><i></i></a><a data-act="8" data-beat="1" title="Estación tipo"><i></i></a><a data-act="8" data-beat="2" title="Estación tipo"><i></i></a><a class="first" data-act="9" data-beat="0" title="Vía férrea"><i></i></a><a data-act="9" data-beat="1" title="Vía férrea"><i></i></a><a class="first" data-act="10" data-beat="0" title="El riel"><i></i></a><a data-act="10" data-beat="1" title="El riel"><i></i></a><a class="first" data-act="11" data-beat="0" title="Proceso constructivo"><i></i></a><a data-act="11" data-beat="1" title="Proceso constructivo"><i></i></a><a data-act="11" data-beat="2" title="Proceso constructivo"><i></i></a><a class="first" data-act="12" data-beat="0" title="Presupuesto"><i></i></a><a data-act="12" data-beat="1" title="Presupuesto"><i></i></a><a class="first" data-act="13" data-beat="0" title="Alternativas y costos"><i></i></a><a data-act="13" data-beat="1" title="Alternativas y costos"><i></i></a><a data-act="13" data-beat="2" title="Alternativas y costos"><i></i></a><a data-act="13" data-beat="3" title="Alternativas y costos"><i></i></a><a data-act="13" data-beat="4" title="Alternativas y costos"><i></i></a><a data-act="13" data-beat="5" title="Alternativas y costos"><i></i></a><a class="first" data-act="14" data-beat="0" title="Normatividad"><i></i></a><a data-act="14" data-beat="1" title="Normatividad"><i></i></a><a class="first" data-act="15" data-beat="0" title="El tren"><i></i></a><a data-act="15" data-beat="1" title="El tren"><i></i></a><a data-act="15" data-beat="2" title="El tren"><i></i></a><a data-act="15" data-beat="3" title="El tren"><i></i></a><a class="first" data-act="16" data-beat="0" title="Así funciona hoy"><i></i></a><a data-act="16" data-beat="1" title="Así funciona hoy"><i></i></a><a class="first" data-act="17" data-beat="0" title="Mantenimiento y rehabilitación"><i></i></a><a data-act="17" data-beat="1" title="Mantenimiento y rehabilitación"><i></i></a><a data-act="17" data-beat="2" title="Mantenimiento y rehabilitación"><i></i></a><a class="first" data-act="18" data-beat="0" title="Materiales y equipos"><i></i></a><a data-act="18" data-beat="1" title="Materiales y equipos"><i></i></a><a data-act="18" data-beat="2" title="Materiales y equipos"><i></i></a><a data-act="18" data-beat="3" title="Materiales y equipos"><i></i></a><a data-act="18" data-beat="4" title="Materiales y equipos"><i></i></a><a data-act="18" data-beat="5" title="Materiales y equipos"><i></i></a><a data-act="18" data-beat="6" title="Materiales y equipos"><i></i></a><a data-act="18" data-beat="7" title="Materiales y equipos"><i></i></a><a class="first" data-act="19" data-beat="0" title="Cierre"><i></i></a><a data-act="19" data-beat="1" title="Cierre"><i></i></a><a data-act="19" data-beat="2" title="Cierre"><i></i></a></nav>
+<main>
+  <section class="act" id="inicio" style="--len:4.2;--a1:#ff6a2a;--a2:#ffc061" data-len="4.2" data-title="Inicio" data-who="Keila" data-time="75" data-seq="hero" data-frames="355" data-ext="webp" data-clips="hero_0-119 hero_120-240 hero_241-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Inicio: animación renderizada"></div><div class="shade"></div>
+      <div class="beat hero" data-a="0" data-b="0.34"><div class="hero-top"><p class="k">Recursos de la construcción · Equipo 7</p></div><h1 class="t">Tren<br>Suburbano</h1><div class="hero-foot"><p>Ampliación Lechería – AIFA<br>Proyecto de evidencia</p><p>Keila · Geovanny · Leo · Ángel<br>Emilio · Dani · José · Axel</p><p class="scroll">Desliza o usa →</p></div></div>
+      <div class="beat B" data-a="0.34" data-b="0.68"><div class="side"><p class="k">La obra en cifras</p><h2 class="h ">Un ramal nuevo de Lechería al aeropuerto</h2></div><div class="stats"><div style="--i:0"><b data-count>23</b><i>km</i><span>de vía electrificada</span></div><div style="--i:1"><b data-count>6+1</b><span>estaciones y terminal</span></div><div style="--i:2"><b data-count>25</b><i>kV</i><span>corriente alterna</span></div><div style="--i:3"><b data-count>43</b><i>min</i><span>Buenavista → AIFA</span></div></div></div>
+      <div class="beat C" data-a="0.68" data-b="1"><p class="k">En operación desde el 26 de abril de 2026</p><h2 class="h ">Siete etapas, de la idea al primer viaje</h2></div>
+    </div>
+    <template class="notes"><ul><li>Presentamos el proyecto y al equipo.</li><li>La exposición sigue las etapas del Proyecto de Evidencia: desarrollo, planeación, diseño, construcción, cuantificación, operación, mantenimiento y rehabilitación, más los materiales y equipos del Equipo 7.</li><li>Teclas: → avanza, F pantalla completa, T reloj, N notas, V el tren.</li></ul></template>
+  </section>
+
+  <section class="act" id="preguntas" style="--len:2.6;--a1:#ff6a2a;--a2:#ffc061" data-len="2.6" data-title="Preguntas guía" data-who="Keila" data-time="45" data-seq="cierre" data-frames="355" data-ext="webp" data-clips="cierre_0-141 cierre_142-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Preguntas guía: animación renderizada"></div><div class="shade"></div>
+      <div class="beat C" data-a="0" data-b="0.4"><p class="k">Antes de empezar</p><h2 class="h ">Cinco preguntas que vas a poder responder al final</h2></div>
+      <div class="beat L" data-a="0.4" data-b="1"><div class="side"><p class="k">Preguntas guía</p><h2 class="h ">Tenlas en mente</h2><p class="p">Las respondemos a lo largo de la exposición.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>¿Por qué es importante la ampliación de la Línea 1 del Tren Suburbano hacia el AIFA?</b></li><li style="--i:1"><span class="i">02</span><b>¿Cuáles son las principales obras que se construyeron en dicha ampliación?</b></li><li style="--i:2"><span class="i">03</span><b>¿Qué impactos ambientales tuvo durante la construcción?</b></li><li style="--i:3"><span class="i">04</span><b>¿Cuál fue el costo final de la realización de la obra?</b></li><li style="--i:4"><span class="i">05</span><b>¿Cómo contribuyó este proyecto al desarrollo socioeconómico de la zona?</b></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Leer las cinco preguntas en voz alta; se responden durante la exposición (no se muestran las respuestas).</li></ul></template>
+  </section>
+
+  <section class="act" id="desarrollo" style="--len:4.5;--a1:#9be15d;--a2:#e9ff70" data-len="4.5" data-title="Desarrollo" data-who="Keila" data-time="105" data-seq="aereo" data-frames="355" data-ext="webp" data-clips="aereo_0-91 aereo_92-218 aereo_219-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Desarrollo: animación renderizada"></div><div class="shade"></div>
+      <div class="beat chap" data-a="0" data-b="0.26"><p class="num">01</p><div class="chap-t"><h2 class="h ">Desarrollo</h2><p class="p">Qué es la obra y qué necesidad resuelve.</p></div></div>
+      <div class="beat L" data-a="0.26" data-b="0.62"><div class="side"><p class="k">¿Qué es?</p><h2 class="h ">Un tren eléctrico de pasajeros</h2><p class="p">Une la Zona Metropolitana del Valle de México con el aeropuerto Felipe Ángeles, en vía exclusiva.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Gran capacidad</b><p>Mueve muchas personas sin tráfico</p></li><li style="--i:1"><span class="i">02</span><b>Eléctrico</b><p>Menos emisiones y menor costo de viaje</p></li><li style="--i:2"><span class="i">03</span><b>CETRAM</b><p>Cambio de transporte en cada estación</p></li><li style="--i:3"><span class="i">04</span><b>Sistemas</b><p>Señalización, control, telecom y CCTV</p></li></ol></div>
+      <div class="beat R" data-a="0.62" data-b="1"><div class="side"><p class="k">La necesidad</p><h2 class="h ">Por qué había que construirlo</h2></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Movilidad</b><p>Muchos viajes del norte del Edomex a la capital y al AIFA</p></li><li style="--i:1"><span class="i">02</span><b>Crecimiento urbano</b><p>Tultitlán y Tultepec presionan el derecho de vía</p></li><li style="--i:2"><span class="i">03</span><b>Seguridad</b><p>Cruces a nivel con el tren de carga</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Sistema ferroviario eléctrico de pasajeros que conecta la ZMVM con el AIFA.</li><li>Mueve grandes volúmenes de personas en vía exclusiva; menos emisiones y menor costo de viaje.</li><li>CETRAM en cada estación; señalización, control de trenes, telecomunicaciones y CCTV.</li><li>Necesidad: alta demanda de viajes, crecimiento desordenado que presiona el derecho de vía y cruces a nivel inseguros con las vías de carga.</li></ul></template>
+  </section>
+
+  <section class="act" id="ubicacion" style="--len:4.2;--a1:#38f2c7;--a2:#7ff7ff" data-len="4.2" data-title="Localización" data-who="Keila" data-time="110" data-seq="topo" data-frames="355" data-ext="webp" data-clips="topo_0-84 topo_85-211 topo_212-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Localización: animación renderizada"></div><div class="shade"></div>
+      <div class="beat chap" data-a="0" data-b="0.24"><p class="num">02</p><div class="chap-t"><h2 class="h ">Planeación</h2><p class="p">Localización, topografía, estudios previos, impacto ambiental y cuantificación.</p></div></div>
+      <div class="beat map" data-a="0.24" data-b="0.6"><div class="side"><p class="k">Localización</p><h2 class="h ">De Lechería al aeropuerto</h2><p class="p">23 km nuevos sobre el derecho de vía de las líneas de carga H, SH y TS, en Tultitlán, Tultepec, Nextlalpan y Zumpango.</p></div><ol class="route"><li style="--i:0"><b>Lechería</b><span>inicia el ramal</span></li><li style="--i:1"><b>Cueyamil</b><span>Tultitlán</span></li><li style="--i:2"><b>La Loma</b><span>antes Los Agaves</span></li><li style="--i:3"><b>Teyahualco</b><span>Tultepec</span></li><li style="--i:4"><b>Prados Sur</b><span>Tultitlán</span></li><li style="--i:5"><b>Cajiga</b><span>antes Nextlalpan</span></li><li style="--i:6"><b>Xaltocan</b><span>antes Jaltocán</span></li><li style="--i:7"><b>AIFA</b><span>terminal</span></li></ol></div>
+      <div class="beat B" data-a="0.6" data-b="1"><div class="side"><p class="k">Datos generales</p><h2 class="h ">El tamaño de la obra</h2></div><div class="stats"><div style="--i:0"><b data-count>102.67</b><i>ha</i><span>superficie</span></div><div style="--i:1"><b data-count>8</b><span>pasos vehiculares</span></div><div style="--i:2"><b data-count>16</b><span>puentes peatonales</span></div><div style="--i:3"><b data-count>2</b><span>viaductos</span></div><div style="--i:4"><b data-count>36</b><i>meses</i><span>plazo planeado</span></div></div></div>
+    </div>
+    <template class="notes"><ul><li>Trazo: 23 km nuevos sobre el derecho de vía de las líneas de carga H, SH y TS.</li><li>Municipios: Tultitlán, Tultepec, Nextlalpan y Zumpango (Edomex). Uso de suelo urbano y agrícola, sin ANP ni vegetación forestal.</li><li>Superficie 102.67 ha; 6 + 1 estaciones; 6 CETRAM; 8 pasos superiores vehiculares; 2 viaductos; 16 puentes peatonales.</li><li>Plazo programado 36 meses (2021–2023); abrió en abril de 2026.</li><li>Nombres actuales: La Loma (antes Los Agaves), Cajiga (antes Nextlalpan), Xaltocan (antes Jaltocán).</li></ul></template>
+  </section>
+
+  <section class="act" id="topografia" style="--len:3.6;--a1:#38f2c7;--a2:#7ff7ff" data-len="3.6" data-title="Topografía y reubicación" data-who="Geovanny" data-time="120" data-seq="gnss" data-frames="355" data-ext="webp" data-clips="gnss_0-183 gnss_184-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Topografía y reubicación: animación renderizada"></div><div class="shade"></div>
+      <div class="beat L" data-a="0" data-b="0.52"><div class="side"><p class="k">Topografía</p><h2 class="h ">Medir antes de construir</h2><p class="p">Coordenadas UTM (WGS84, zona 14Q). El trazo va de 480 a 505 km Este.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Red primaria</b><p>Monumentos cada 2–5 km con GNSS</p></li><li style="--i:1"><span class="i">02</span><b>Red secundaria</b><p>Puntos cada 200–500 m con estación total</p></li><li style="--i:2"><span class="i">03</span><b>Nivelación</b><p>Perfil cada 10–20 m; banco a 2,240.5 msnm</p></li></ol></div>
+      <div class="beat R" data-a="0.52" data-b="1"><div class="side"><p class="k">Reubicación</p><h2 class="h ">Primero, mover lo que ya estaba</h2></div><div class="col"><div class="stats"><div style="--i:0"><b data-count>31.4</b><i>km</i><span>de vías de carga desplazadas</span></div></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Hidráulica</b><p>Canales de riego, drenaje y agua potable</p></li><li style="--i:1"><span class="i">02</span><b>Energía y datos</b><p>Redes de gas y fibra óptica</p></li></ol></div></div>
+    </div>
+    <template class="notes"><ul><li>Coordenadas UTM, datum WGS84, zona 14Q; X 480–505 km E, Y 2,165–2,185 km N.</li><li>Red primaria cada 2–5 km con GNSS; red secundaria cada 200–500 m con poligonales cerradas y estación total.</li><li>Nivelación: banco a ~2,240.5 msnm; perfil cada 10–20 m y secciones transversales; nivel digital y mira de invar.</li><li>Reubicación: 31.4 km de vías de carga con desvíos provisionales y patio de maniobras nuevo (la MIA indica 31.4 km, no 75).</li><li>Servicios a cajones de concreto, desvíos hidráulicos y ductos subterráneos reforzados.</li></ul></template>
+  </section>
+
+  <section class="act" id="estudios" style="--len:3.2;--a1:#ff9f43;--a2:#ffd56b" data-len="3.2" data-title="Estudios previos" data-who="Leo" data-time="85" data-seq="suelos" data-frames="355" data-ext="webp" data-clips="suelos_0-176 suelos_177-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Estudios previos: animación renderizada"></div><div class="shade"></div>
+      <div class="beat C" data-a="0" data-b="0.5"><p class="k">Estudios previos</p><h2 class="h ">Lo que justifica la obra antes de construirla</h2></div>
+      <div class="beat L" data-a="0.5" data-b="1"><div class="side"><p class="k">Estudios</p><h2 class="h ">Doce estudios, cuatro claves</h2><p class="p">Mercado, suelos, sismo y economía decidieron el proyecto.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Mercado</b><p>70,256 → 82,641 usuarios al día</p></li><li style="--i:1"><span class="i">02</span><b>Mecánica de suelos</b><p>Sondeos, SPT y sustitución bajo losas</p></li><li style="--i:2"><span class="i">03</span><b>Sismo</b><p>Zona B de CFE, factor 1.5</p></li><li style="--i:3"><span class="i">04</span><b>Económico</b><p>Ganó 2 vías + 6 estaciones, B/C 1.83</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Localización y uso de suelo; beneficios esperados; factibilidades (25 kV, agua, drenaje, reubicación).</li><li>Mercado: 70,256 a 82,641 usuarios/día con 6 estaciones.</li><li>Mecánica de suelos: sondeos, SPT y sustitución bajo losas. Estructural: NTC-RCDF 2017, SAP2000 e IDEA StatiCa. Sísmico: zona B CFE, PRODISIS, factor 1.5.</li><li>Instalaciones: catenaria, ETCS nivel 1, fibra, radio TETRA y CCTV. Vial: 8 pasos y 16 puentes. Pavimentos: terraplén al 95 %.</li><li>Impacto ambiental: MIA regional (15EM2021V0150). Evaluación económica: tres alternativas, ganó 2V + 6 con B/C 1.83.</li></ul></template>
+  </section>
+
+  <section class="act" id="impacto" style="--len:4;--a1:#a3e635;--a2:#fde047" data-len="4" data-title="Impacto y mitigación" data-who="Emilio · Ángel" data-time="140" data-seq="naturaleza" data-frames="355" data-ext="webp" data-clips="naturaleza_0-119 naturaleza_120-236 naturaleza_237-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Impacto y mitigación: animación renderizada"></div><div class="shade"></div>
+      <div class="beat L" data-a="0" data-b="0.34"><div class="side"><p class="k">Impacto ambiental · Emilio</p><h2 class="h ">Un trazo que ya estaba impactado</h2><p class="p">Usa un derecho de vía existente: no fragmenta ecosistemas nuevos. La MIA lo declara ambientalmente viable.</p></div><div class="stats"><div style="--i:0"><b data-count>346</b><i>t/año</i><span>de CO en obra</span></div><div style="--i:1"><b data-count>442</b><i>t/año</i><span>de NOₓ</span></div><div style="--i:2"><b data-count>577</b><i>kg/día</i><span>de residuos</span></div></div></div>
+      <div class="beat C" data-a="0.34" data-b="0.67"><p class="k">Operación</p><h2 class="h ">100 % eléctrico: saca de la ruta autos y autobuses a diésel</h2></div>
+      <div class="beat R" data-a="0.67" data-b="1"><div class="side"><p class="k">Mitigación · Ángel</p><h2 class="h ">Cómo se redujo el daño</h2></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Aire y polvo</b><p>Riego de frentes; maquinaria revisada</p></li><li style="--i:1"><span class="i">02</span><b>Suelo y residuos</b><p>Almacenes protegidos; sitios autorizados</p></li><li style="--i:2"><span class="i">03</span><b>Flora y fauna</b><p>Rescate y reubicación de animales</p></li><li style="--i:3"><span class="i">04</span><b>Ruido</b><p>Trabajos ruidosos solo de día</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Método: redes de causa-efecto entre fases y aire, suelo, agua, flora, fauna y medio social.</li><li>Construcción: 346 t/año de CO, 442 t/año de NOx; 577 kg/día de residuos del personal.</li><li>Veredicto: ambientalmente viable; impactos temporales y mitigables, beneficios por 30 años.</li><li>Vigilancia ambiental: bitácora, medición de aire y ruido, revisión de residuos e informes a la autoridad.</li></ul></template>
+  </section>
+
+  <section class="act" id="cuantificacion" style="--len:6;--a1:#c084fc;--a2:#ff9de6" data-len="6" data-title="Cuantificación" data-who="Axel · Dani · José" data-time="190" data-seq="catenaria" data-frames="355" data-ext="webp" data-clips="catenaria_0-88 catenaria_89-176 catenaria_177-265 catenaria_266-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Cuantificación: animación renderizada"></div><div class="shade"></div>
+      <div class="beat B" data-a="0" data-b="0.25"><div class="side"><p class="k">Planeación · Cuantificación · Axel</p><h2 class="h ">El tamaño del proyecto</h2></div><div class="stats"><div style="--i:0"><b data-count>23</b><i>km</i><span>vía electrificada</span></div><div style="--i:1"><b data-count>102.67</b><i>ha</i><span>1,026,661 m²</span></div><div style="--i:2"><b data-count>10,832</b><i>M$</i><span>inversión (MIA)</span></div><div style="--i:3"><b data-count>36</b><i>meses</i><span>ejecución</span></div><div style="--i:4"><b data-count>30</b><i>años</i><span>vida útil</span></div></div></div>
+      <div class="beat L" data-a="0.25" data-b="0.5"><div class="side"><p class="k">Explosión de insumos · Dani</p><h2 class="h ">Lo que pide la vía</h2><p class="p">Estimación del equipo para 23 km de doble vía; no son cantidades oficiales.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Riel RE 115</b><p>46 km × 2 rieles × 57 kg/m ≈ 5,250 t</p></li><li style="--i:1"><span class="i">02</span><b>Durmientes de concreto</b><p>uno cada 0.60 m ≈ 76,700 piezas</p></li><li style="--i:2"><span class="i">03</span><b>Grapas elásticas</b><p>4 por durmiente ≈ 306,700 piezas</p></li><li style="--i:3"><span class="i">04</span><b>Balasto</b><p>≈ 1.7 m³ por metro ≈ 78,000 m³</p></li></ol></div>
+      <div class="beat R" data-a="0.5" data-b="0.75"><div class="side"><p class="k">Costos de cada alternativa · José</p><h2 class="h ">Inversión y operación</h2><p class="p">Costos sin IVA con los que se compararon las tres opciones.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>1 vía + 4 estaciones</b><p>Inversión $10,832 M · operación $283 M al año</p></li><li style="--i:1"><span class="i">02</span><b>2 vías + 4 estaciones</b><p>Inversión $11,719 M · operación $294 M al año</p></li><li style="--i:2"><span class="i">03</span><b>2 vías + 6 estaciones</b><p>Inversión $12,556 M · operación $332 M al año</p></li></ol></div>
+      <div class="beat L" data-a="0.75" data-b="1"><div class="side"><p class="k">Electrificación y obras complementarias · Axel</p><h2 class="h ">25,000 voltios por un hilo de cobre</h2><p class="p">Catenaria con sustentador e hilo de contacto sobre postes HEB; ETCS nivel 1, fibra óptica, radio TETRA y CCTV.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Laderos de rebase</b><p>6 de 500 m</p></li><li style="--i:1"><span class="i">02</span><b>Viaductos y pasos</b><p>2 viaductos · 8 pasos vehiculares</p></li><li style="--i:2"><span class="i">03</span><b>Puentes peatonales</b><p>16, con rampas de accesibilidad</p></li><li style="--i:3"><span class="i">04</span><b>Confinamiento</b><p>Mallas de protección y CETRAM en cada estación</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Axel: tamaño del proyecto — 23 km de vía electrificada en Tultitlán, Tultepec, Nextlalpan y Zumpango; 1,026,661.09 m² (102.67 ha); 6 estaciones + terminal AIFA; inversión > $10,832 M; 36 meses; vida útil 30 años.</li><li>Dani: Riel: 46 km × 2 × 57 kg/m ≈ 5,250 t. Durmientes cada 0.60 m ≈ 76,700. Grapas 4 por durmiente ≈ 306,700.</li><li>Balasto ≈ 1.7 m³/m ≈ 78,000 m³. Hilo de contacto 46 km × 120 mm² ≈ 49 t. Postes HEB cada ~50 m ≈ 920.</li><li>José: inversión y operación anual sin IVA — 1V+4: $10,832,153,788 y $282,934,394; 2V+4: $11,718,690,084 y $294,351,000; 2V+6: $12,556,285,514 y $332,254,715.</li><li>Axel: catenaria aérea a 25 kV con cable sustentador e hilo de contacto sobre postes HEB; ETCS N1, fibra óptica, radio TETRA y CCTV. Obras complementarias: reubicación de 31.4 km de vías de carga, 6 laderos de 500 m, 2 viaductos, 8 pasos vehiculares, 16 puentes peatonales, CETRAM y mallas de confinamiento.</li></ul></template>
+  </section>
+
+  <section class="act" id="estacion" style="--len:4.2;--a1:#ff4d4d;--a2:#ffb36b" data-len="4.2" data-title="Estación tipo" data-who="Dani" data-time="100" data-seq="estacion" data-frames="355" data-ext="webp" data-clips="estacion_0-91 estacion_92-222 estacion_223-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Estación tipo: animación renderizada"></div><div class="shade"></div>
+      <div class="beat chap" data-a="0" data-b="0.26"><p class="num">03</p><div class="chap-t"><h2 class="h ">Diseño</h2><p class="p">Especificaciones de la estación tipo y de la vía.</p></div></div>
+      <div class="beat L" data-a="0.26" data-b="0.63"><div class="side"><p class="k">Estación tipo</p><h2 class="h ">Más de 200 m de andén</h2><p class="p">Seis estaciones diseñadas por PROES con metodología BIM.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Cimentación</b><p>Losa de 0.65 m sobre el terreno</p></li><li style="--i:1"><span class="i">02</span><b>Muros laterales</b><p>0.50 m: cargan pilares y frenan descarrilamientos</p></li><li style="--i:2"><span class="i">03</span><b>Andén central</b><p>8 m (Xaltocan 12 m); vías a 15 m</p></li></ol></div>
+      <div class="beat R" data-a="0.63" data-b="1"><div class="side"><p class="k">Arcotecho</p><h2 class="h ">Acero rojo, sin estructura intermedia</h2></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Vestíbulo elevado</b><p>113 m sobre emparrillado metálico</p></li><li style="--i:1"><span class="i">02</span><b>Losa colaborante</b><p>12 cm</p></li><li style="--i:2"><span class="i">03</span><b>Sismo</b><p>Zona B · factor 1.5 · 2 juntas</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Seis estaciones de más de 200 m, diseñadas por PROES con BIM.</li><li>Losa de cimentación de 0.65 m; muros laterales de 0.50 m que cargan pilares y frenan descarrilamientos.</li><li>Andén central de 8 m (Xaltocan 12 m); vías a 15 m entre ejes.</li><li>Vestíbulo elevado de 113 m sobre emparrillado metálico y losa colaborante de 12 cm.</li><li>Arcotecho sin estructura de soporte, acero pintado de rojo; zona sísmica B, factor 1.5; dos juntas de dilatación.</li></ul></template>
+  </section>
+
+  <section class="act" id="via" style="--len:4.2;--a1:#ff9f43;--a2:#ffd56b" data-len="4.2" data-title="Vía férrea" data-who="Dani" data-time="90" data-seq="capas" data-frames="355" data-ext="webp" data-clips="capas_0-176 capas_177-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Vía férrea: animación renderizada"></div><div class="shade"></div>
+      <div class="beat R" data-a="0" data-b="0.5"><div class="side"><p class="k">Vía férrea</p><h2 class="h ">Capa por capa</h2><p class="p">Cada capa reparte la carga del tren a la siguiente.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Terraplén</b><p>Compactado al 95 %</p></li><li style="--i:1"><span class="i">02</span><b>Subbalasto</b><p>Capa granular de transición</p></li><li style="--i:2"><span class="i">03</span><b>Balasto</b><p>Roca triturada que drena y amortigua</p></li><li style="--i:3"><span class="i">04</span><b>Durmientes</b><p>Concreto, uno cada 0.60 m</p></li><li style="--i:4"><span class="i">05</span><b>Riel RE 115</b><p>≈ 57 kg/m con grapas elásticas</p></li></ol></div>
+      <div class="beat B" data-a="0.5" data-b="1"><div class="side"><p class="k">Especificaciones</p><h2 class="h ">Vía continua y soldada</h2></div><div class="stats"><div style="--i:0"><b data-count>1,435</b><i>mm</i><span>ancho internacional</span></div><div style="--i:1"><b data-count>1,140</b><i>m</i><span>viaducto 1</span></div><div style="--i:2"><b data-count>2,320</b><i>m</i><span>viaducto 2</span></div><div style="--i:3"><b data-count>3,100</b><i>m</i><span>cajón SEDENA al AIFA</span></div></div></div>
+    </div>
+    <template class="notes"><ul><li>Terraplén al 95 %, subbalasto, balasto de roca triturada, durmientes de concreto con grapas elásticas.</li><li>Ancho de 1,435 mm. RE = Railway Engineering (AREMA), 115 lb/yd ≈ 57 kg/m. Soldadura aluminotérmica: vía continua.</li><li>Viaductos de 1,140 m y 2,320 m; cajón de ~3,100 m de SEDENA para entrar al AIFA; puente sobre el canal de desagüe para 4 vías.</li></ul></template>
+  </section>
+
+  <section class="act" id="riel" style="--len:2.6;--a1:#7dd3fc;--a2:#e0f2fe" data-len="2.6" data-title="El riel" data-who="Dani" data-time="45" data-seq="riel" data-frames="355" data-ext="webp" data-clips="riel_0-176 riel_177-353">
+    <div class="pin"><div class="vids" role="img" aria-label="El riel: animación renderizada"></div><div class="shade"></div>
+      <div class="beat L" data-a="0" data-b="0.5"><div class="side"><p class="k">El riel · Dani</p><h2 class="h ">Perfil RE 115</h2><p class="p">Acero laminado en caliente. Cada parte del perfil tiene un trabajo.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Cabeza</b><p>Superficie de rodadura donde apoya la rueda</p></li><li style="--i:1"><span class="i">02</span><b>Alma</b><p>Lleva la carga vertical hacia abajo</p></li><li style="--i:2"><span class="i">03</span><b>Patín</b><p>Reparte la carga sobre la placa y el durmiente</p></li></ol></div>
+      <div class="beat B" data-a="0.5" data-b="1"><div class="side"><p class="k">Datos del riel</p><h2 class="h ">Pesado, recto y continuo</h2><p class="p">Se suelda en barras largas (aluminotérmica) para que la vía no tenga juntas.</p></div><div class="stats"><div style="--i:0"><b data-count>57</b><i>kg/m</i><span>≈ 115 lb/yd</span></div><div style="--i:1"><b data-count>168</b><i>mm</i><span>de altura</span></div><div style="--i:2"><b data-count>140</b><i>mm</i><span>de patín</span></div><div style="--i:3"><b data-count>1,435</b><i>mm</i><span>entre rieles</span></div></div></div>
+    </div>
+    <template class="notes"><ul><li>RE = Railway Engineering (AREMA); 115 lb/yd ≈ 57 kg/m.</li><li>Altura ≈ 168 mm; patín ≈ 140 mm; cabeza ≈ 69 mm; alma ≈ 16 mm.</li><li>Se fija al durmiente de concreto con placa y grapa elástica; soldadura aluminotérmica: vía continua.</li></ul></template>
+  </section>
+
+  <section class="act" id="proceso" style="--len:4.5;--a1:#ffb627;--a2:#ff7a1a" data-len="4.5" data-title="Proceso constructivo" data-who="Leo" data-time="100" data-seq="obra" data-frames="355" data-ext="webp" data-clips="obra_0-88 obra_89-226 obra_227-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Proceso constructivo: animación renderizada"></div><div class="shade"></div>
+      <div class="beat chap" data-a="0" data-b="0.25"><p class="num">04</p><div class="chap-t"><h2 class="h ">Construcción</h2><p class="p">Proceso, programa de obra, normas y presupuesto.</p></div></div>
+      <div class="beat proc" data-a="0.25" data-b="0.64"><div class="side"><p class="k">Proceso constructivo</p><h2 class="h ">De los estudios al primer viaje</h2></div><ol class="steps"><li style="--i:0"><b>1</b>Trazo<span>GNSS y estación total</span></li><li style="--i:1"><b>2</b>Reubicación<span>vías y servicios</span></li><li style="--i:2"><b>3</b>Terracerías<span>despalme y terraplén</span></li><li style="--i:3"><b>4</b>Vía<span>balasto, durmiente, riel</span></li><li style="--i:4"><b>5</b>Estaciones<span>concreto y acero</span></li><li style="--i:5"><b>6</b>Catenaria<span>25 kV y ETCS</span></li><li style="--i:6"><b>7</b>Pruebas<span>21 dic 2025</span></li></ol></div>
+      <div class="beat B" data-a="0.64" data-b="1"><div class="side"><p class="k">Programa de obra</p><h2 class="h ">Se planeó en 3 años; tomó casi 5</h2></div><div class="stats"><div style="--i:0"><b data-count>2021</b><span>inicio</span></div><div style="--i:1"><b data-count>36</b><i>meses</i><span>plazo original</span></div><div style="--i:2"><b data-count>2026</b><span>apertura · 26 abr</span></div></div></div>
+    </div>
+    <template class="notes"><ul><li>1 Trazo y control topográfico · 2 Reubicación de vías y servicios · 3 Terracerías y drenaje · 4 Superestructura de vía · 5 Estaciones, pasos y viaductos · 6 Electrificación y sistemas · 7 Pruebas (21 dic 2025) y apertura (26 abr 2026).</li><li>Empresas: Ferrocarriles Suburbanos (CAF), Rubau, PROES, Cupisa/Azvi; SEDENA concluyó la obra.</li></ul></template>
+  </section>
+
+  <section class="act" id="presupuesto" style="--len:3.6;--a1:#ffd166;--a2:#ff8c42" data-len="3.6" data-title="Presupuesto" data-who="José" data-time="75" data-seq="estacion_aerea" data-frames="355" data-ext="webp" data-clips="estacion_aerea_0-176 estacion_aerea_177-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Presupuesto: animación renderizada"></div><div class="shade"></div>
+      <div class="beat R" data-a="0" data-b="0.5"><div class="side"><p class="k">Presupuesto · evaluación socioeconómica</p><h2 class="h ">Ganó la alternativa más cara</h2><p class="p">Con 6 estaciones la demanda sube de 70,256 a 82,641 usuarios al día y eso paga la inversión extra.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>1 vía + 4 estaciones</b><p>VPN $8,315 M · B/C 1.58</p></li><li style="--i:1"><span class="i">02</span><b>2 vías + 4 estaciones</b><p>VPN $7,518 M · B/C 1.50</p></li><li style="--i:2"><span class="i">03</span><b>2 vías + 6 estaciones ✓</b><p>VPN $13,144 M · TIR 17.3 % · TRI 16.15 % · B/C 1.83</p></li></ol></div>
+      <div class="beat B" data-a="0.5" data-b="1"><div class="side"><p class="k">Costo final</p><h2 class="h ">Casi el doble de lo estimado</h2><p class="p">Suspensiones, inconformidades de comunidades y retrasos de las empresas; el Gobierno Federal tomó el control.</p></div><div class="stats"><div style="--i:0"><b data-count>14,388</b><i>M$</i><span>estimado original</span></div><div style="--i:1"><b data-count>25,800</b><i>M$</i><span>costo final reportado</span></div></div></div>
+    </div>
+    <template class="notes"><ul><li>Inversión sin IVA: $10,832 M (1V+4), $11,719 M (2V+4), $12,556 M (2V+6). TIR 17.3 %, TRI 16.15 %.</li><li>Presupuesto original $14,388 M; costo final > $25,800 M por suspensiones, inconformidades y retrasos; SEDENA tomó el control.</li><li>Catálogo de conceptos: despalme, terraplén, subbalasto, balasto, durmiente, riel, soldadura, catenaria, concreto y acero estructural.</li></ul></template>
+  </section>
+
+  <section class="act" id="alternativas" style="--len:6;--a1:#ffd166;--a2:#ff8c42" data-len="6" data-title="Alternativas y costos" data-who="José" data-time="150" data-seq="aereo" data-frames="355" data-ext="webp" data-clips="aereo_0-59 aereo_60-119 aereo_120-176 aereo_177-236 aereo_237-296 aereo_297-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Alternativas y costos: animación renderizada"></div><div class="shade"></div>
+      <div class="beat M" data-a="0" data-b="0.17"><div class="side"><p class="k">Alternativas de solución · José</p><h2 class="h ">Tres trazos comparados</h2></div><div class="maps"><figure style="--i:0"><img src="img/jose/mapa_2v6est.webp" alt="Alternativa 2V + 6 estaciones" loading="lazy" decoding="async"><figcaption>Alternativa 2V + 6 estaciones</figcaption></figure><figure style="--i:1"><img src="img/jose/mapa_2v4est.webp" alt="Alternativas 2V + 4 y 1V + 4 estaciones" loading="lazy" decoding="async"><figcaption>Alternativas 2V + 4 y 1V + 4 estaciones</figcaption></figure></div></div>
+      <div class="beat T" data-a="0.17" data-b="0.34"><div class="tbl"><p class="k">Inversión sin IVA · obra (pesos)</p><table><thead><tr><th>Componente</th><th class="pick">2V + 6 est. ✓</th><th>2V + 4 est.</th><th>1V + 4 est.</th></tr></thead><tbody><tr style="--i:0"><td>Infraestructura y vía</td><td class="pick">$3,911,403,126</td><td>$3,893,395,699</td><td>$3,552,354,622</td></tr><tr style="--i:1"><td>Estaciones y talleres</td><td class="pick">$1,365,050,662</td><td>$1,019,466,788</td><td>$943,254,157</td></tr><tr style="--i:2"><td>Señalización y telecomunicaciones</td><td class="pick">$2,081,183,967</td><td>$1,983,937,747</td><td>$1,849,788,216</td></tr><tr style="--i:3"><td>Reubicación de vías de carga</td><td class="pick">$826,095,264</td><td>$823,708,118</td><td>$775,663,978</td></tr><tr style="--i:4"><td>Pasos a desnivel y peatonales</td><td class="pick">$551,466,513</td><td>$551,466,513</td><td>$551,466,513</td></tr><tr style="--i:5"><td>Reubicación del patio de maniobras</td><td class="pick">$432,557,195</td><td>$432,557,195</td><td>$432,557,195</td></tr><tr style="--i:6"><td>Adecuaciones viales</td><td class="pick">$757,178,281</td><td>$559,089,140</td><td>$559,089,140</td></tr></tbody></table></div></div>
+      <div class="beat T" data-a="0.34" data-b="0.5"><div class="tbl"><p class="k">Inversión sin IVA · terrenos y gestión (pesos)</p><table><thead><tr><th>Componente</th><th class="pick">2V + 6 est. ✓</th><th>2V + 4 est.</th><th>1V + 4 est.</th></tr></thead><tbody><tr style="--i:0"><td>Terrenos</td><td class="pick">$709,000,000</td><td>$537,000,000</td><td>$537,000,000</td></tr><tr style="--i:1"><td>Costos legales</td><td class="pick">$145,330,170</td><td>$142,992,697</td><td>$124,202,895</td></tr><tr style="--i:2"><td>Seguros y fianzas</td><td class="pick">$424,177,250</td><td>$424,177,250</td><td>$327,426,000</td></tr><tr style="--i:3"><td>Proyecto ejecutivo</td><td class="pick">$429,430,975</td><td>$428,426,123</td><td>$326,510,000</td></tr><tr style="--i:4"><td>Supervisión</td><td class="pick">$125,000,000</td><td>$125,000,000</td><td>$100,000,000</td></tr><tr style="--i:5"><td>Integrador operativo</td><td class="pick">$185,000,000</td><td>$185,000,000</td><td>$142,788,120</td></tr><tr style="--i:6"><td>Certificación</td><td class="pick">$125,000,000</td><td>$125,000,000</td><td>$125,000,000</td></tr><tr style="--i:7"><td>Gerencia integral</td><td class="pick">$488,412,113</td><td>$487,472,814</td><td>$485,052,953</td></tr></tbody><tfoot><tr><td>Total de inversión</td><td class="pick">$12,556,285,514</td><td>$11,718,690,084</td><td>$10,832,153,788</td></tr></tfoot></table></div></div>
+      <div class="beat T" data-a="0.5" data-b="0.67"><div class="tbl"><p class="k">Costos de operación anuales sin IVA (pesos)</p><table><thead><tr><th>Componente</th><th class="pick">2V + 6 est. ✓</th><th>2V + 4 est.</th><th>1V + 4 est.</th></tr></thead><tbody><tr style="--i:0"><td>Energía eléctrica (alta tensión)</td><td class="pick">25,717,537</td><td>25,718,000</td><td>25,717,537</td></tr><tr style="--i:1"><td>Personal del servicio ferroviario</td><td class="pick">49,310,400</td><td>38,469,000</td><td>38,469,300</td></tr><tr style="--i:2"><td>Costo de tarjetas</td><td class="pick">6,975,194</td><td>6,975,000</td><td>6,975,194</td></tr><tr style="--i:3" class="sub"><td>Subtotal de operación</td><td class="pick">82,003,131</td><td>71,162,000</td><td>71,162,031</td></tr><tr style="--i:4" class="sub"><td>Subtotal indirectos y generales</td><td class="pick">250,251,584</td><td>223,189,000</td><td>211,772,363</td></tr></tbody><tfoot><tr><td>Total de costos al año</td><td class="pick">332,254,715</td><td>294,351,000</td><td>282,934,394</td></tr></tfoot></table></div></div>
+      <div class="beat T" data-a="0.67" data-b="0.84"><div class="tbl"><p class="k">Costos indirectos y generales anuales (pesos)</p><table><thead><tr><th>Componente</th><th class="pick">2V + 6 est. ✓</th><th>2V + 4 est.</th><th>1V + 4 est.</th></tr></thead><tbody><tr style="--i:0"><td>Fiduciario</td><td class="pick">1,850,580</td><td>1,851,000</td><td>1,850,580</td></tr><tr style="--i:1"><td>Derechos por concesión</td><td class="pick">4,714,117</td><td>4,714,000</td><td>4,714,117</td></tr><tr style="--i:2"><td>Vigilancia</td><td class="pick">16,598,400</td><td>12,348,000</td><td>12,348,000</td></tr><tr style="--i:3"><td>Energía eléctrica · estaciones</td><td class="pick">3,431,459</td><td>2,451,000</td><td>2,451,042</td></tr><tr style="--i:4"><td>Personal</td><td class="pick">10,065,108</td><td>9,873,000</td><td>9,814,768</td></tr><tr style="--i:5"><td>Limpieza</td><td class="pick">3,677,372</td><td>3,677,000</td><td>3,677,372</td></tr><tr style="--i:6"><td>Seguros y fianzas</td><td class="pick">62,382,877</td><td>44,559,000</td><td>44,559,198</td></tr><tr style="--i:7"><td>Costos directos de mantenimiento</td><td class="pick">110,255,412</td><td>108,417,000</td><td>100,711,748</td></tr><tr style="--i:8"><td>Materiales para mantenimiento</td><td class="pick">25,112,324</td><td>25,112,000</td><td>21,459,372</td></tr><tr style="--i:9"><td>Gastos generales</td><td class="pick">1,629,534</td><td>1,558,000</td><td>1,557,534</td></tr><tr style="--i:10"><td>Traslado de valores</td><td class="pick">9,201,334</td><td>7,296,000</td><td>7,295,565</td></tr><tr style="--i:11"><td>Honorarios</td><td class="pick">795,050</td><td>795,000</td><td>795,050</td></tr><tr style="--i:12"><td>Derechos por consumo de agua</td><td class="pick">538,017</td><td>538,000</td><td>538,017</td></tr></tbody><tfoot><tr><td>Subtotal</td><td class="pick">250,251,584</td><td>223,189,000</td><td>211,772,363</td></tr></tfoot></table></div></div>
+      <div class="beat T" data-a="0.84" data-b="1"><div class="tbl"><p class="k">Indicadores de rentabilidad (pesos de 2020)</p><table><thead><tr><th>Indicador</th><th class="pick">2V + 6 est. ✓</th><th>2V + 4 est.</th><th>1V + 4 est.</th></tr></thead><tbody><tr style="--i:0"><td>Demanda diaria (usuarios)</td><td class="pick">82,641</td><td>70,256</td><td>70,256</td></tr><tr style="--i:1"><td>Valor presente de los costos</td><td class="pick">$15,764,640,261</td><td>$15,016,981,763</td><td>$14,219,868,357</td></tr><tr style="--i:2"><td>Valor presente de los beneficios</td><td class="pick">$28,908,812,221</td><td>$22,535,820,990</td><td>$22,535,820,990</td></tr><tr style="--i:3"><td>Valor presente neto (VPN)</td><td class="pick">$13,144,171,960</td><td>$7,518,839,226</td><td>$8,315,952,633</td></tr><tr style="--i:4"><td>Tasa interna de retorno (TIR)</td><td class="pick">17.30 %</td><td>14.63 %</td><td>15.39 %</td></tr><tr style="--i:5"><td>Tasa de rentabilidad inmediata (TRI)</td><td class="pick">16.15 %</td><td>13.06 %</td><td>14.00 %</td></tr><tr style="--i:6"><td>Relación beneficio / costo</td><td class="pick">1.83</td><td>1.50</td><td>1.58</td></tr></tbody></table></div></div>
+    </div>
+    <template class="notes"><ul><li>Mapas: 2V+6 agrega Nextlalpan (hoy Cajiga) y Prados Sur; 2V+4 y 1V+4 comparten trazo con 4 estaciones.</li><li>Inversión total sin IVA: 2V+6 $12,556,285,514 · 2V+4 $11,718,690,084 · 1V+4 $10,832,153,788.</li><li>Operación anual: 2V+6 $332,254,715 · 2V+4 $294,351,000 · 1V+4 $282,934,394.</li><li>Ganó 2V+6: VPN $13,144 M, TIR 17.30 %, TRI 16.15 %, B/C 1.83, demanda 82,641 usuarios al día.</li><li>El valor presente de costos de 1V+4 (tapado en la captura) se obtiene de beneficios − VPN = $14,219,868,357.</li></ul></template>
+  </section>
+
+  <section class="act" id="normas" style="--len:4;--a1:#a3e635;--a2:#fde047" data-len="4" data-title="Normatividad" data-who="Todos · una norma cada quien" data-time="85" data-seq="rasante" data-frames="355" data-ext="webp" data-clips="rasante_0-176 rasante_177-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Normatividad: animación renderizada"></div><div class="shade"></div>
+      <div class="beat L" data-a="0" data-b="0.5"><div class="side"><p class="k">Normatividad</p><h2 class="h ">Normas Oficiales Mexicanas de SEMARNAT</h2><p class="p">Las ocho que aplican a la obra, en el orden de la votación del equipo.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>NOM-052 · Residuos peligrosos</b><p>Pintura, solventes y aceites a contenedores especiales y empresas autorizadas. — Keila</p></li><li style="--i:1"><span class="i">02</span><b>NOM-054 · Incompatibilidad de residuos</b><p>Qué residuos peligrosos no pueden almacenarse juntos. — Geovanny</p></li><li style="--i:2"><span class="i">03</span><b>NOM-041 · Emisiones · gasolina</b><p>Camionetas y vehículos ligeros afinados y verificados. — Leo</p></li><li style="--i:3"><span class="i">04</span><b>NOM-045 · Opacidad · diésel</b><p>Humo de la maquinaria pesada y los camiones de volteo. — Emilio</p></li></ol></div>
+      <div class="beat R" data-a="0.5" data-b="1"><div class="side"><p class="k">Normatividad</p><h2 class="h ">…y las cuatro restantes</h2><p class="p">Diseño: NTC-RCDF 2017 y Manual de Obras Civiles de CFE.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>NOM-050 · Emisiones · gas</b><p>Equipos y vehículos a gas LP o natural. — Ángel</p></li><li style="--i:1"><span class="i">02</span><b>NOM-080 · Ruido de vehículos</b><p>Escapes en buen estado; trabajos ruidosos de día. — Axel</p></li><li style="--i:2"><span class="i">03</span><b>NOM-059 · Especies en riesgo</b><p>Revisión del trazo; rescate y reubicación de fauna. — Dani</p></li><li style="--i:3"><span class="i">04</span><b>NOM-113 · Subestaciones eléctricas</b><p>Protección ambiental de las que alimentan los 25 kV. — José</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>NOM-052: Residuos peligrosos. Pintura, solventes y aceites a contenedores especiales y empresas autorizadas.</li><li>NOM-054: Incompatibilidad de residuos. Qué residuos peligrosos no pueden almacenarse juntos.</li><li>NOM-041: Emisiones · gasolina. Camionetas y vehículos ligeros afinados y verificados.</li><li>NOM-045: Opacidad · diésel. Humo de la maquinaria pesada y los camiones de volteo.</li><li>NOM-050: Emisiones · gas. Equipos y vehículos a gas LP o natural.</li><li>NOM-080: Ruido de vehículos. Escapes en buen estado; trabajos ruidosos de día.</li><li>NOM-059: Especies en riesgo. Revisión del trazo; rescate y reubicación de fauna.</li><li>NOM-113: Subestaciones eléctricas. Protección ambiental de las que alimentan los 25 kV.</li><li>En la MIA la 059 y la 113 están cruzadas y la 045 aparece como de gasolina (es de diésel); aquí van corregidas.</li></ul></template>
+  </section>
+
+  <section class="act" id="vitrina" style="--len:4;--a1:#ff3dac;--a2:#ffb03a" data-len="4" data-title="El tren" data-who="Leo" data-time="60" data-seq="vitrina" data-frames="715" data-ext="webp" data-clips="vitrina_0-209 vitrina_209-314 vitrina_314-589 vitrina_589-714">
+    <div class="pin"><div class="vids" role="img" aria-label="El tren: animación renderizada"></div><div class="shade"></div>
+      <div class="beat chap" data-a="0" data-b="0.16"><p class="num">05</p><div class="chap-t"><h2 class="h ">Operación</h2><p class="p">Puesta en marcha, mantenimiento y rehabilitación.</p></div></div>
+      <div class="beat L" data-a="0.16" data-b="0.42"><div class="side"><p class="k">El tren</p><h2 class="h ">CAF Civity · 22 m por coche</h2><p class="p">Unidad eléctrica de cinco coches a 25 kV de corriente alterna.</p></div><div class="stats"><div style="--i:0"><b data-count>130</b><i>km/h</i><span>de diseño</span></div><div style="--i:1"><b data-count>65</b><i>km/h</i><span>media en servicio</span></div></div></div>
+      <div class="beat R" data-a="0.42" data-b="0.72"><div class="side"><p class="k">Despiece</p><h2 class="h ">Cómo se arma un coche</h2></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Techo</b><p>Clima, aisladores y pantógrafo</p></li><li style="--i:1"><span class="i">02</span><b>Caja</b><p>Aluminio, cabina y puertas dobles</p></li><li style="--i:2"><span class="i">03</span><b>Bastidor</b><p>Equipos de tracción y frenos</p></li><li style="--i:3"><span class="i">04</span><b>Bogies</b><p>Ruedas, discos y suspensión neumática</p></li></ol></div>
+      <div class="beat L" data-a="0.72" data-b="1"><div class="side"><p class="k">A bordo</p><h2 class="h ">Pensado para viajar parado o sentado</h2></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Asientos 2 + 2</b><p>Enfrentados, con pasillo continuo</p></li><li style="--i:1"><span class="i">02</span><b>Tubos y pasamanos</b><p>Acero inoxidable</p></li><li style="--i:2"><span class="i">03</span><b>Información</b><p>Pantallas con la próxima estación</p></li><li style="--i:3"><span class="i">04</span><b>Accesibilidad</b><p>Puertas a nivel de andén</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Coche cabina de una unidad eléctrica CAF Civity, de unos 22 m; velocidad de diseño 130 km/h, media de operación 65 km/h.</li><li>Despiece: techo (clima, aisladores, pantógrafo), caja de aluminio con cabina y puertas, bastidor con equipos de tracción, dos bogies con ruedas, frenos de disco y suspensión neumática.</li><li>Interior: asientos 2 + 2, tubos de acero inoxidable, LED, pantallas, piso antiderrapante.</li></ul></template>
+  </section>
+
+  <section class="act" id="real" style="--len:4;--a1:#60a5fa;--a2:#ffd38a" data-len="4" data-title="Así funciona hoy" data-who="Geovanny" data-time="45">
+    <div class="pin"><img class="photo" src="img/f41.jpg" alt=""  decoding="async"><img class="photo" src="img/f10.jpg" alt=""  decoding="async"><img class="photo" src="img/f13.jpg" alt="" loading="lazy" decoding="async"><img class="photo" src="img/f17.jpg" alt="" loading="lazy" decoding="async"><img class="photo" src="img/f34.jpg" alt="" loading="lazy" decoding="async"><img class="photo" src="img/f20.jpg" alt="" loading="lazy" decoding="async"><div class="shade"></div>
+      <div class="beat L" data-a="0" data-b="0.5"><div class="side"><p class="k">Visita del equipo · Prados Sur</p><h2 class="h ">Así funciona hoy</h2><p class="p">Vestíbulo con arcotecho, fachada perforada, pasarela al CETRAM y doble vía.</p></div></div>
+      <div class="beat B" data-a="0.5" data-b="1"><div class="side"><p class="k">Operación</p><h2 class="h ">Horario y servicio</h2></div><div class="stats"><div style="--i:0"><b data-count>05–24</b><i>h</i><span>entre semana</span></div><div style="--i:1"><b data-count>15–30</b><i>min</i><span>entre trenes</span></div><div style="--i:2"><b data-count>45</b><i>$</i><span>tarifa al AIFA</span></div></div></div>
+    </div>
+    <template class="notes"><ul><li>Fotos de la visita del equipo a Prados Sur.</li><li>Horario 05:00–24:00 entre semana; trenes cada 15–30 min; tarifa promocional de $45 al AIFA.</li></ul></template>
+  </section>
+
+  <section class="act" id="mantenimiento" style="--len:5;--a1:#60a5fa;--a2:#a78bfa" data-len="5" data-title="Mantenimiento y rehabilitación" data-who="Geovanny · Leo" data-time="120" data-seq="noche" data-frames="355" data-ext="webp" data-clips="noche_0-77 noche_78-211 noche_212-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Mantenimiento y rehabilitación: animación renderizada"></div><div class="shade"></div>
+      <div class="beat chap" data-a="0" data-b="0.22"><p class="num">06</p><div class="chap-t"><h2 class="h ">Mantenimiento y rehabilitación</h2><p class="p">Cómo se conserva la obra y cómo se recupera ante fenómenos naturales.</p></div></div>
+      <div class="beat L" data-a="0.22" data-b="0.6"><div class="side"><p class="k">Mantenimiento · Geovanny</p><h2 class="h ">Predictivo, preventivo y correctivo</h2></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Vía</b><p>Amolado, bateadora e inspección ultrasónica</p></li><li style="--i:1"><span class="i">02</span><b>Energía y señales</b><p>Desgaste del hilo y termografía</p></li><li style="--i:2"><span class="i">03</span><b>Trenes</b><p>Torneado de ruedas; revisiones A, B y gran revisión</p></li><li style="--i:3"><span class="i">04</span><b>Control</b><p>UPS, servidores y anillos de fibra</p></li></ol></div>
+      <div class="beat R quake" data-a="0.6" data-b="1"><div class="side"><p class="k">Rehabilitación · Leo</p><h2 class="h ">Lo que la naturaleza le hace a la obra</h2><p class="p">Inspección → evaluación → reparación → reapertura con pruebas.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Sismo</b><p>Revisar viaductos, juntas y apoyos</p></li><li style="--i:1"><span class="i">02</span><b>Hundimiento</b><p>Suelos lacustres: renivelar vía</p></li><li style="--i:2"><span class="i">03</span><b>Inundación</b><p>Canal de desagüe y drenaje pluvial</p></li><li style="--i:3"><span class="i">04</span><b>Tormentas</b><p>Pararrayos y tierras de cobre</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Vía: amolado, bateadora, engrase de cambios, ultrasonido. Energía: desgaste del hilo, termografía, balizas ETCS. Trenes: torneado de ruedas, revisión diaria de pantógrafos y frenos. Control: UPS, generadores, fibra.</li><li>Sismo: zona B, estaciones grupo A2 factor 1.5. Hundimiento: antiguo lago de Xaltocan. Inundación: canal de desagüe. Tormentas: pararrayos, tierras de cobre, aisladores.</li></ul></template>
+  </section>
+
+  <section class="act" id="materiales" style="--len:7.5;--a1:#ffffff;--a2:#ffe66d" data-len="7.5" data-title="Materiales y equipos" data-who="Todos · un material cada quien" data-time="180" data-seq="materiales" data-frames="751" data-ext="webp" data-sync="0.07 1" data-clips="materiales_0-106 materiales_0-106 materiales_107-213 materiales_214-320 materiales_321-428 materiales_429-535 materiales_536-642 materiales_643-749">
+    <div class="pin"><div class="vids" role="img" aria-label="Materiales y equipos: animación renderizada"></div><div class="shade"></div>
+      <div class="beat chap" data-a="0" data-b="0.07"><p class="num">07</p><div class="chap-t"><h2 class="h ">Materiales</h2><p class="p">Acero, cobre, tabique, ladrillo, adoquín, asfalto y extendedora.</p></div></div>
+      <div class="beat L" data-a="0.07" data-b="0.20285714285714287"><div class="side"><p class="k">01 / 07 · Axel</p><h2 class="h ">Acero</h2><p class="p">Rieles, columnas del arcotecho, postes HEB y varilla de losas.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Tipos</b><p>A36 / A572 · varilla G42</p></li><li style="--i:1"><span class="i">02</span><b>Riel</b><p>RE 115 ≈ 57 kg/m</p></li><li style="--i:2"><span class="i">03</span><b>Norma</b><p>NMX-B-506</p></li></ol></div>
+      <div class="beat L" data-a="0.20285714285714287" data-b="0.33571428571428574"><div class="side"><p class="k">02 / 07 · José</p><h2 class="h ">Cobre</h2><p class="p">Hilo de contacto que toca el pantógrafo, cableado de señales y tierras.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Conductividad</b><p>≈ 100 % IACS</p></li><li style="--i:1"><span class="i">02</span><b>Hilo</b><p>107–150 mm²</p></li><li style="--i:2"><span class="i">03</span><b>Tubería</b><p>tipos K, L y M</p></li></ol></div>
+      <div class="beat L" data-a="0.33571428571428574" data-b="0.4685714285714286"><div class="side"><p class="k">03 / 07 · Keila</p><h2 class="h ">Tabique rojo</h2><p class="p">Pieza maciza de arcilla cocida; muros confinados de los locales técnicos.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Medida</b><p>7 × 14 × 28 cm</p></li><li style="--i:1"><span class="i">02</span><b>Uso</b><p>muros de carga</p></li><li style="--i:2"><span class="i">03</span><b>Norma</b><p>NMX-C-404</p></li></ol></div>
+      <div class="beat L" data-a="0.4685714285714286" data-b="0.6014285714285714"><div class="side"><p class="k">04 / 07 · Geovanny</p><h2 class="h ">Ladrillo</h2><p class="p">Extruido y cocido en planta: hueco, más ligero y mejor aislante.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Ventaja</b><p>menos peso</p></li><li style="--i:1"><span class="i">02</span><b>Uso</b><p>muros de servicios</p></li><li style="--i:2"><span class="i">03</span><b>Norma</b><p>NMX-C-404 / 036</p></li></ol></div>
+      <div class="beat L" data-a="0.6014285714285714" data-b="0.7342857142857144"><div class="side"><p class="k">05 / 07 · Ángel</p><h2 class="h ">Adoquín</h2><p class="p">Pavimento articulado de concreto sobre cama de arena, confinado con guarniciones.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Espesor</b><p>6, 8 y 10 cm</p></li><li style="--i:1"><span class="i">02</span><b>Resistencia</b><p>350–450 kg/cm²</p></li><li style="--i:2"><span class="i">03</span><b>Norma</b><p>NMX-C-314</p></li></ol></div>
+      <div class="beat L" data-a="0.7342857142857144" data-b="0.8671428571428572"><div class="side"><p class="k">06 / 07 · Emilio</p><h2 class="h ">Asfalto</h2><p class="p">Cemento asfáltico mezclado en caliente para pasos vehiculares y accesos.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Tendido</b><p>140–160 °C</p></li><li style="--i:1"><span class="i">02</span><b>Compactar</b><p>antes de 110 °C</p></li><li style="--i:2"><span class="i">03</span><b>Grado</b><p>PG 64-22</p></li></ol></div>
+      <div class="beat L" data-a="0.8671428571428572" data-b="1"><div class="side"><p class="k">07 / 07 · Dani</p><h2 class="h ">Extendedora</h2><p class="p">Recibe la mezcla, la reparte a lo ancho y la precompacta con su plancha.</p></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Flujo</b><p>tolva → sinfines → plancha</p></li><li style="--i:1"><span class="i">02</span><b>Urbana</b><p>7–12 t · 2.5–6 m</p></li><li style="--i:2"><span class="i">03</span><b>Renta</b><p>$2,500–3,200 / h</p></li></ol></div>
+    </div>
+    <template class="notes"><ul><li>Tabique: arcilla cocida, 7 × 14 × 28 cm, NMX-C-404. Ladrillo: extruido, hueco, más ligero. Adoquín: 6–10 cm, 350–450 kg/cm², NMX-C-314.</li><li>Acero: A36/A572 y varilla G42 (NMX-B-506). Cobre: ≈100 % IACS, hilo 107–150 mm². Asfalto: 140–160 °C, compactar antes de 110 °C.</li><li>Extendedora (Dani): tolva → cintas → sinfines → plancha vibratoria (hasta 80 % de compactación); urbana 7–12 t; renta $2,500–3,200/h; compra $8.8–14.8 M.</li></ul></template>
+  </section>
+
+  <section class="act" id="cierre" style="--len:4.5;--a1:#ff6a2a;--a2:#ffc061" data-len="4.5" data-title="Cierre" data-who="Axel" data-time="60" data-seq="cierre" data-frames="355" data-ext="webp" data-clips="cierre_0-126 cierre_127-254 cierre_255-353">
+    <div class="pin"><div class="vids" role="img" aria-label="Cierre: animación renderizada"></div><div class="shade"></div>
+      <div class="beat L" data-a="0" data-b="0.36"><div class="side"><p class="k">Conclusión</p><h2 class="h ">No es solo teoría</h2><p class="p">En el corredor del AIFA hubo que hacer muros de contención en lugar de taludes: no había espacio junto a los carriles. Todo es presupuesto.</p></div></div>
+      <div class="beat R" data-a="0.36" data-b="0.72"><div class="side"><p class="k">Rúbrica</p><h2 class="h ">Lo que cubrimos</h2></div><ol class="rows"><li style="--i:0"><span class="i">01</span><b>Desarrollo</b><p>Qué es y qué necesidad resuelve</p></li><li style="--i:1"><span class="i">02</span><b>Planeación</b><p>Estudios previos y cuantificación con explosión de insumos</p></li><li style="--i:2"><span class="i">03</span><b>Diseño y construcción</b><p>Programa, catálogo, presupuesto y normatividad</p></li><li style="--i:3"><span class="i">04</span><b>Operación, mantenimiento y rehabilitación</b><p>Incluye fenómenos naturales</p></li><li style="--i:4"><span class="i">05</span><b>Materiales y equipos</b><p>Los siete del Equipo 7</p></li></ol></div>
+      <div class="beat C" data-a="0.72" data-b="1"><h1 class="t">Gracias</h1><p class="p">Equipo 7 · Tren Suburbano Buenavista → AIFA</p></div>
+    </div>
+    <template class="notes"><ul><li>Fuentes: MIA SEMARNAT 15EM2021V0150; Gandía et al. (PROES), ACHE 2025; Wikipedia (25 oct 2026); DOF NOM-052, 054, 041, 045, 050, 080, 059 y 113; NMX-C-404, NMX-C-314, NMX-B-506; fichas Vögele, Caterpillar, Dynapac, Volvo; tabulador CMIC 2026; visita a Prados Sur.</li><li>Imágenes 3D renderizadas por el equipo en Blender (Cycles).</li></ul></template>
+  </section>
+</main>
+<script src="vendor/lenis.min.js"></script>
+<script>// Motor de la página: cada diapositiva tiene su propio video (el tramo de la animación que le toca) a 60 cps, en
+// bucle sin corte. Al cambiar de diapositiva el video nuevo entra con una disolvencia sobre el anterior. Las flechas
+// (o el scroll) cambian de diapositiva; al soltar el scroll la página se acomoda sola en la más cercana.
+(() => {
+  const vh = () => innerHeight;
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lenis = window.Lenis && !still ? new window.Lenis({ duration: 1.25, easing: (t) => 1 - Math.pow(1 - t, 4), smoothWheel: true }) : null;
+  if (lenis) { const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); }; requestAnimationFrame(raf); }
+  window.lenis = lenis;
+  // teléfonos y equipos modestos usan videos de 960 px: la mitad de peso y de decodificación
+  const LITE = innerWidth <= 900 || (navigator.deviceMemory && navigator.deviceMemory <= 4) || !!navigator.connection?.saveData;
+  const BASE = LITE ? "v_m" : "v";
+
+  // partir títulos en palabras para que entren una por una
+  document.querySelectorAll(".beat .h, .beat .t").forEach((h) => {
+    let d = 0;
+    const walk = (node) => {
+      for (const n of [...node.childNodes]) {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach((part) => {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.append(" "); return; }
+            const w = document.createElement("span"); w.className = "w";
+            const i = document.createElement("span"); i.textContent = part; i.style.setProperty("--d", d++);
+            w.append(i); frag.append(w);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1 && n.tagName !== "BR") walk(n);
+      }
+    };
+    walk(h);
+  });
+
+  // ───────── tomas ─────────
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const acts = [...document.querySelectorAll(".act")].map((el, idx) => {
+    const d = el.dataset;
+    return {
+      el, idx, id: el.id, len: +d.len, clips: d.clips ? d.clips.split(" ") : [],
+      pin: el.querySelector(".pin"), box: el.querySelector(".vids"), photos: [...el.querySelectorAll(".photo")],
+      beats: [...el.querySelectorAll(".beat")].map((b) => ({ el: b, a: +b.dataset.a, b: +b.dataset.b, quake: b.classList.contains("quake"), on: false })),
+      vids: new Map(), cur: null, k: 0, top: 0, visible: false, active: false, z: 1,
+    };
+  });
+
+  // ───────── videos ─────────
+  const slow = () => window.__slow || 1;   // el grabador corre la página en cámara lenta
+  const vid = (a, name) => {
+    let v = a.vids.get(name);
+    if (v) return v;
+    v = document.createElement("video");
+    v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto";
+    v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.disablePictureInPicture = true;
+    v.dataset.name = name;
+    v.src = `${BASE}/${name}.mp4`;
+    v.playbackRate = 1 / slow();
+    a.box.appendChild(v); a.vids.set(name, v);
+    return v;
+  };
+  const playSafe = (v) => { if (still) return; v.playbackRate = 1 / slow(); const p = v.play(); if (p) p.catch(() => {}); };
+  // pone en pantalla el video de la diapositiva k: entra encima del anterior con una disolvencia
+  const showClip = (a, k) => {
+    const name = a.clips[k] || a.clips[0];
+    if (!name) return;
+    const next = a.clips[k + 1];
+    if (next && next !== name) vid(a, next);            // precarga la siguiente diapositiva
+    if (a.cur === name) return;
+    const prev = a.cur ? a.vids.get(a.cur) : null;
+    a.cur = name;
+    const v = vid(a, name);
+    v.style.zIndex = ++a.z;
+    try { v.currentTime = 0; } catch (e) {}
+    const reveal = () => {
+      if (a.cur !== name) return;
+      v.classList.add("on");
+      // el anterior se apaga cuando el nuevo ya cubre la pantalla
+      if (prev && prev !== v) setTimeout(() => { if (a.cur !== prev.dataset.name) { prev.classList.remove("on"); prev.pause(); } }, 800);
+    };
+    // un video ya precargado vuelve a "buscar" el segundo 0 un instante: se revisa en cada cuadro hasta tenerlo listo
+    const check = () => { if (a.cur !== name) return; if (v.readyState >= 2 && !v.seeking) reveal(); else requestAnimationFrame(check); };
+    check();
+    if (a.visible) playSafe(v);
+  };
+  const activate = (a, on) => {
+    if (!a.box || a.active === on) return;
+    a.active = on;
+    if (on) showClip(a, a.k);
+    else {
+      for (const v of a.vids.values()) { v.pause(); v.removeAttribute("src"); v.load(); v.remove(); }
+      a.vids.clear(); a.cur = null;
+    }
+  };
+  const setVisible = (a, vis) => {
+    if (a.visible === vis) return;
+    a.visible = vis;
+    const v = a.cur && a.vids.get(a.cur);
+    if (v) vis ? playSafe(v) : v.pause();
+  };
+  // fotos: se encadenan solas, cada una con un acercamiento lento
+  const photos = (a, now) => {
+    const n = a.photos.length, PER = 4.2, t = now / 1000 / PER, i = Math.floor(t) % n, f = t % 1;
+    a.photos.forEach((ph, j) => {
+      const prev = (i - 1 + n) % n;
+      const o = j === i ? 1 : j === prev ? clamp(1 - f / 0.25) : 0;
+      if (ph._o !== o) { ph._o = o; ph.style.opacity = o.toFixed(3); ph.style.zIndex = j === i ? 1 : 2; }
+      if (o > 0) ph.style.transform = `scale(${(1.04 + ((j === i ? f : 1 + f) * 0.06)).toFixed(4)})`;
+    });
+  };
+
+  // ───────── medidas, paradas y rayitas (una por diapositiva) ─────────
+  let stops = [];
+  const measure = () => {
+    stops = [];
+    for (const a of acts) {
+      a.top = a.el.getBoundingClientRect().top + scrollY;
+      a.beats.forEach((b) => { b.stop = Math.round(a.top + b.a * a.len * vh() + (b.a === 0 ? 0 : 2)); stops.push(b.stop); });
+    }
+    stops = [...new Set(stops)].sort((x, y) => x - y);
+  };
+  const bars = [...document.querySelectorAll(".bar a")].map((el) => ({ el, a: +el.dataset.act, b: +el.dataset.beat }));
+
+  // ───────── estado de cada toma según el scroll ─────────
+  const whoEl = document.querySelector(".who"), nowEl = document.querySelector(".hud span");
+  let current = null, lastY = -1;
+  function tick() {
+    const y = scrollY, H = vh();
+    for (const a of acts) {
+      const rel = y - a.top;                      // 0 cuando la toma llega arriba
+      const p = clamp(rel / (a.len * H));
+      const near = rel > -1.6 * H && rel < (a.len + 1.2) * H;
+      // diapositiva activa: la última cuya frase ya empezó
+      let k = 0;
+      if (rel >= 0) a.beats.forEach((b, i) => { if (p >= b.a - 1e-4) k = i; });
+      if (k !== a.k) { a.k = k; if (a.active) showClip(a, k); }
+      activate(a, near);
+      if (!near) { setVisible(a, false); continue; }
+      // transición entre tomas: la que entra se queda fija arriba y aparece con un zoom suave encima de la anterior
+      const smooth = (x) => x * x * (3 - 2 * x);
+      const enter = a.idx === 0 ? 1 : smooth(clamp(1 + rel / H));
+      const out = smooth(clamp((rel - a.len * H) / H));
+      const tf = rel < 0 && a.idx > 0 ? `translate3d(0,${Math.round(rel)}px,0) scale(${(1.07 - 0.07 * enter).toFixed(4)})` : out > 0 ? `scale(${(1 + 0.05 * out).toFixed(4)})` : "";
+      const op = enter.toFixed(3);
+      if (a._tf !== tf) { a._tf = tf; a.pin.style.transform = tf; }
+      if (a._op !== op) { a._op = op; a.pin.style.opacity = op; }
+      setVisible(a, enter > 0 && rel < (a.len + 1) * H);
+      let quake = false;
+      for (const b of a.beats) {
+        const on = rel >= -0.4 * H && p >= b.a && (p < b.b || (b.b >= 1 && rel <= a.len * H + 0.3 * H)) && (b.a > 0 || rel >= -0.4 * H);
+        if (on !== b.on) { b.on = on; b.el.classList.toggle("on", on); if (on) countUp(b.el); }
+        if (on && b.quake) quake = true;
+      }
+      a.pin.classList.toggle("quake", quake);
+      if (rel >= -0.5 * H && rel < (a.len + 0.5) * H && current !== a) {
+        current = a;
+        nowEl.textContent = a.el.dataset.title;
+        whoEl.textContent = a.el.dataset.who ? "Expone · " + a.el.dataset.who : "";
+        whoEl.classList.toggle("on", !!a.el.dataset.who);
+        window.dispatchEvent(new CustomEvent("act", { detail: a }));
+      }
+    }
+    // rayitas: llenas las diapositivas ya vistas; la actual se va llenando con el scroll
+    if (current) {
+      for (const r of bars) {
+        const a = acts[r.a], b = a.beats[r.b];
+        let f = 0;
+        if (r.a < current.idx) f = 1;
+        else if (r.a === current.idx) {
+          const p = clamp((scrollY - a.top) / (a.len * vh()));
+          f = r.b < a.k ? 1 : r.b === a.k ? (r.b === a.beats.length - 1 ? 1 : clamp(((p - b.a) / (b.b - b.a)) * 0.9 + 0.1)) : 0;
+        }
+        const s = f.toFixed(3);
+        if (r._s !== s) { r._s = s; r.el.firstChild.style.transform = `scaleX(${s})`; }
+        const now = r.a === current.idx && r.b === current.k;
+        if (r._n !== now) { r._n = now; r.el.classList.toggle("now", now); }
+      }
+    }
+  }
+
+  // ───────── acomodo: al soltar el scroll, la página llega sola a la diapositiva más cercana ─────────
+  let lastMove = performance.now(), snapping = false, touching = false;
+  addEventListener("wheel", () => { snapping = !!window.__keepNoSnap; }, { passive: true });
+  addEventListener("touchstart", () => { touching = true; snapping = !!window.__keepNoSnap; }, { passive: true });
+  addEventListener("touchend", () => { touching = false; }, { passive: true });
+  const nearestStop = () => {
+    let best = null, bd = 1e9;
+    for (const s of stops) { const d = Math.abs(s - scrollY); if (d < bd) { bd = d; best = s; } }
+    return best;
+  };
+  const loop = (now = performance.now()) => {
+    if (scrollY !== lastY) { lastY = scrollY; lastMove = now; tick(); }
+    else if (!still && !snapping && !touching && !auto && now - lastMove > 260 && !document.body.classList.contains("loading")) {
+      const s = nearestStop(), maxY = document.documentElement.scrollHeight - innerHeight;
+      if (s != null && Math.abs(s - scrollY) > 3 && scrollY < maxY - 2) { snapping = true; go(s, 0.85); }
+    }
+    for (const a of acts) if (a.visible && a.photos.length) photos(a, now);
+    requestAnimationFrame(loop);
+  };
+  const next = () => { const n = stops.find((x) => x > scrollY + 4); if (n == null) return false; snapping = true; go(n); return true; };
+  const prev = () => { const p = [...stops].reverse().find((x) => x < scrollY - 4); snapping = true; go(p ?? 0); };
+
+  // modo presentación: A avanza solo de diapositiva en diapositiva
+  let auto = null;
+  const autoBadge = document.createElement("p"); autoBadge.className = "auto-badge"; autoBadge.textContent = "Presentación automática · A para detener";
+  document.body.appendChild(autoBadge);
+  addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() !== "a" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (auto) { clearInterval(auto); auto = null; }
+    else auto = setInterval(() => { if (!next()) { clearInterval(auto); auto = null; autoBadge.classList.remove("on"); } }, 7000);
+    autoBadge.classList.toggle("on", !!auto);
+  });
+
+  // cifras que cuentan hacia arriba al aparecer
+  const countUp = (root) => root.querySelectorAll("[data-count]").forEach((el) => {
+    const raw = el.dataset.raw || (el.dataset.raw = el.textContent);
+    const m = raw.match(/^([^\d]*)([\d,.]+)(.*)$/);
+    if (!m || still) return;
+    const target = parseFloat(m[2].replace(/,/g, "")), dec = (m[2].split(".")[1] || "").length, comma = m[2].includes(",");
+    const t0 = performance.now(), dur = 1100;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      let v = (target * e).toFixed(dec);
+      if (comma) v = Number(v).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      el.textContent = m[1] + v + m[3];
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+
+  // ───────── teclado y rayitas ─────────
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  function go(y, dur = 1.4) {
+    if (lenis) lenis.scrollTo(y, { duration: dur, easing: ease, onComplete: () => { snapping = !!window.__keepNoSnap; } });
+    else { scrollTo({ top: y, behavior: still ? "auto" : "smooth" }); setTimeout(() => { snapping = !!window.__keepNoSnap; }, dur * 1000); }
+  }
+  addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (["ArrowDown", "ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); next(); }
+    else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); prev(); }
+    else if (e.key === "Home") { e.preventDefault(); snapping = true; go(0); }
+    else if (e.key === "End") { e.preventDefault(); snapping = true; go(document.documentElement.scrollHeight); }
+    else if (e.key.toLowerCase() === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+  });
+  for (const r of bars) r.el.addEventListener("click", () => { snapping = true; go(acts[r.a].beats[r.b].stop); });
+  window.goToAct = (id) => { const a = acts.find((x) => x.id === id); if (a) { snapping = true; go(a.top); } };
+  // para pruebas y grabación
+  window.__noSnap = () => { snapping = true; window.__keepNoSnap = true; };
+  window.__state = () => acts.filter((a) => a.visible).map((a) => { const v = a.cur && a.vids.get(a.cur); return { id: a.id, k: a.k, clip: a.cur, t: v ? v.currentTime : null, on: v ? v.classList.contains("on") : false, ready: v ? v.readyState : 0, paused: v ? v.paused : null }; });
+  window.__ready = () => acts.every((a) => { if (!a.visible || !a.cur) return true; const v = a.vids.get(a.cur); return v && v.readyState >= 3 && v.classList.contains("on"); });
+
+  addEventListener("resize", () => { measure(); lastY = -1; });
+  measure();
+
+  // grano de película generado una sola vez
+  {
+    const c = document.createElement("canvas"); c.width = c.height = 220;
+    const g = c.getContext("2d"), d = g.createImageData(220, 220);
+    for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+    g.putImageData(d, 0, 0);
+    const el = document.createElement("div"); el.className = "grain"; el.style.backgroundImage = `url(${c.toDataURL()})`;
+    document.body.appendChild(el);
+  }
+
+  // pantalla de carga: espera a que el video de la portada pueda reproducirse
+  const first = acts[0];
+  activate(first, true);
+  const loaderBar = document.querySelector(".loader i");
+  let done = false;
+  const finish = () => { if (done) return; done = true; loaderBar?.style.setProperty("--p", "1"); document.body.classList.remove("loading"); measure(); lastY = -1; };
+  const fv = first.cur && first.vids.get(first.cur);
+  if (fv) fv.addEventListener("canplaythrough", finish, { once: true });
+  setTimeout(finish, 6000);
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(measure);
+  requestAnimationFrame(loop);
+})();
+
+// Modo expositor: T reloj de 30 minutos (la primera vez lo arranca), P pausa, N notas de la toma, V el tren por dentro.
+(() => {
+  const TOTAL = 30 * 60;
+  const acts = [...document.querySelectorAll(".act")];
+  let acc = 0;
+  const plan = acts.map((el) => { const p = { el, id: el.id, t: +el.dataset.time, start: acc, who: el.dataset.who || "", title: el.dataset.title }; acc += p.t; return p; });
+  const fmt = (x) => { const a = Math.abs(Math.round(x)); return `${x < 0 ? "−" : ""}${Math.floor(a / 60)}:${String(a % 60).padStart(2, "0")}`; };
+
+  const box = document.createElement("aside");
+  box.className = "presenter";
+  box.innerHTML = `<div class="pr-top"><b class="pr-clock">0:00</b><span class="pr-total">/ 30:00</span><span class="pr-pace"></span></div>
+    <div class="pr-bar"><i class="pr-fill"></i><i class="pr-mark"></i></div>
+    <p class="pr-sec"></p><div class="pr-secbar"><i></i></div>
+    <div class="pr-notes"></div><p class="pr-help"><kbd>→</kbd> avanzar · <kbd>T</kbd> reloj · <kbd>P</kbd> pausa · <kbd>N</kbd> notas · <kbd>V</kbd> el tren · <kbd>A</kbd> automático · <kbd>F</kbd> pantalla completa</p>`;
+  document.body.appendChild(box);
+  const $ = (q) => box.querySelector(q);
+
+  let running = false, t0 = 0, acc0 = 0, cur = plan[0], enteredAt = 0, shown = false;
+  const elapsed = () => acc0 + (running ? (performance.now() - t0) / 1000 : 0);
+  const setAct = (p) => {
+    if (!p || p === cur && $(".pr-sec").textContent) return;
+    cur = p; enteredAt = elapsed();
+    $(".pr-sec").textContent = `${p.title}${p.who ? " · " + p.who : ""} — ${fmt(p.t)}`;
+    $(".pr-notes").innerHTML = p.el.querySelector("template.notes")?.innerHTML || "";
+  };
+  addEventListener("act", (e) => setAct(plan.find((p) => p.el === e.detail.el)));
+  const tick = () => {
+    if (!shown) return;
+    const e = elapsed();
+    $(".pr-clock").textContent = fmt(e);
+    $(".pr-fill").style.transform = `scaleX(${Math.min(1, e / TOTAL)})`;
+    $(".pr-mark").style.left = `${(cur.start / TOTAL) * 100}%`;
+    const late = e - (cur.start + Math.min(cur.t, e - enteredAt));
+    const pace = $(".pr-pace");
+    pace.textContent = Math.abs(late) < 15 ? "a tiempo" : late > 0 ? `${fmt(late)} tarde` : `${fmt(-late)} antes`;
+    pace.dataset.state = Math.abs(late) < 15 ? "ok" : late > 0 ? "late" : "early";
+    const inSec = e - enteredAt;
+    $(".pr-secbar i").style.transform = `scaleX(${Math.min(1, inSec / cur.t)})`;
+    box.classList.toggle("over", inSec > cur.t);
+    requestAnimationFrame(tick);
+  };
+  const show = (v) => { shown = v; box.classList.toggle("on", v); setAct(cur); if (v) requestAnimationFrame(tick); };
+  addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k === "t") { if (!running && acc0 === 0) { running = true; t0 = performance.now(); enteredAt = 0; } show(!shown); }
+    else if (k === "p") { if (running) { acc0 = elapsed(); running = false; } else { running = true; t0 = performance.now(); } box.classList.toggle("paused", !running); }
+    else if (k === "n") { if (!shown) show(true); box.classList.toggle("notes"); }
+    else if (k === "v") window.goToAct?.("vitrina");
+  });
+})();
+</script>
+</body>
+</html>
