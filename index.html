@@ -453,8 +453,9 @@ html,body{overflow-x:clip}
   // versión ligera (960 px): teléfonos y tablets chicas (aunque su pantalla tenga muchos píxeles, el 1080p
   // pesa 10 veces más y traba al decodificar), pantallas chicas de verdad, o si se pidió ahorrar datos
   const phone = matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 820;
-  const LITE = phone || innerWidth * (devicePixelRatio || 1) < 1000 || !!navigator.connection?.saveData;
-  const BASE = LITE ? "v_m" : "v";
+  // teléfonos: 720p (punto medio entre calidad y peso); 540p solo con ahorro de datos o pantallas muy chicas
+  const LITE = innerWidth * (devicePixelRatio || 1) < 1000 || !!navigator.connection?.saveData;
+  const BASE = LITE ? "v_m" : phone ? "v_h" : "v";
 
   // partir títulos en palabras para que entren una por una
   document.querySelectorAll(".beat .h, .beat .t").forEach((h) => {
